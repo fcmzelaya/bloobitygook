@@ -13,8 +13,9 @@ export function spawnBall(world, worldEl, def) {
     friction = 0.25,
   } = def;
 
+  const circleEl = createSvgElement("circle", { r: radius, fill: color });
   const el = createSvgElement("g");
-  el.appendChild(createSvgElement("circle", { r: radius, fill: color }));
+  el.appendChild(circleEl);
   worldEl.appendChild(el);
 
   return spawn(world, {
@@ -23,6 +24,6 @@ export function spawnBall(world, worldEl, def) {
     x, y, vx, vy,
     radius, color, restitution, friction,
     scaleX: 1, scaleY: 1, scaleVelX: 0, scaleVelY: 0,
-    el,
+    el, circleEl,
   });
 }

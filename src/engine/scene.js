@@ -35,7 +35,17 @@ export function loadScene(world, worldEl, sceneData) {
     }
     spawnFn(world, worldEl, def);
   }
-  return sceneData.gravity ?? 900;
+  return normalizeGravity(sceneData.gravity);
+}
+
+export const DEFAULT_GRAVITY = { mode: "uniform", magnitude: 900, x: 400, y: 300 };
+
+// Accepts the pre-point-gravity file format (a bare number) alongside the
+// current { mode, magnitude, x, y } shape, so older saved scenes still load.
+function normalizeGravity(raw) {
+  if (raw == null) return { ...DEFAULT_GRAVITY };
+  if (typeof raw === "number") return { ...DEFAULT_GRAVITY, magnitude: raw };
+  return { ...DEFAULT_GRAVITY, ...raw };
 }
 
 function round(n) {
