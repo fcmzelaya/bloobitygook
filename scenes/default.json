@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "gravity": 900,
+  "objects": [
+    { "type": "ball", "x": 200, "y": 80, "radius": 32, "color": "#5ec8c0", "restitution": 0.82, "friction": 0.15 },
+    { "type": "ball", "x": 400, "y": 40, "radius": 24, "color": "#e0955e", "restitution": 0.6, "friction": 0.3 },
+    { "type": "ball", "x": 600, "y": 120, "radius": 40, "color": "#c17ec9", "restitution": 0.92, "friction": 0.05 }
+  ]
+}
