@@ -25,20 +25,18 @@ jobs:
           VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
           VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
       # Requires a `FIREBASE_SERVICE_ACCOUNT` repo secret (Project Settings
-      # -> Service Accounts -> Generate new private key) and the two
-      # Hosting targets ("play", "editor") already created and mapped via
-      # `firebase target:apply hosting <target> <site-id>` — see the
-      # restructure plan's manual-setup checklist. Replace <firebase-project-id>
-      # once the project exists.
+      # -> Service Accounts -> Generate new private key). The "play"/"editor"
+      # Hosting targets are already mapped in .firebaserc (bloobitygook /
+      # bloobitygook-editor sites).
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           target: play
-          projectId: <firebase-project-id>
+          projectId: bloobitygook
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           target: editor
-          projectId: <firebase-project-id>
+          projectId: bloobitygook

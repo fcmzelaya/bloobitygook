@@ -119,6 +119,11 @@ dist
 # Firebase cache directory
 .firebase/
 
+# Firebase CLI agent-skills — downloadable reference docs, refetched via
+# skills-lock.json (which stays tracked), not project source.
+/.agents/skills/
+/.claude/skills/
+
 # TernJS port file
 .tern-port
 

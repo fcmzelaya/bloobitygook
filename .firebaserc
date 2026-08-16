@@ -1,0 +1,18 @@
+{
+  "projects": {
+    "default": "bloobitygook"
+  },
+  "targets": {
+    "bloobitygook": {
+      "hosting": {
+        "play": [
+          "bloobitygook"
+        ],
+        "editor": [
+          "bloobitygook-editor"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}
