@@ -1,6 +1,6 @@
 import { clear, query } from "./world.js";
 import { clearChildren } from "./svg.js";
-import { spawnBall } from "../game/ball.js";
+import { spawnBall } from "./objects/ball.js";
 
 // One place mapping a scene object's "type" field to the function that
 // knows how to spawn it. Adding a new object type means adding one entry

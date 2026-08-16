@@ -1,5 +1,5 @@
-import { spawn } from "../engine/world.js";
-import { createSvgElement } from "../engine/svg.js";
+import { spawn } from "../world.js";
+import { createSvgElement } from "../svg.js";
 
 // `def` is the same shape a scene JSON object uses — spawning from code
 // and spawning from a loaded file go through the exact same function.

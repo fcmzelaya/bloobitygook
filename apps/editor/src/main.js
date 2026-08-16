@@ -1,16 +1,21 @@
-import { createWorld, query, destroy } from "./engine/world.js";
-import { startLoop } from "./engine/loop.js";
 import {
+  createWorld,
+  destroy,
+  startLoop,
   gravitySystem,
   integrateSystem,
   collisionSystem,
   ballCollisionSystem,
   deformationSystem,
   renderSystem,
-} from "./engine/physics.js";
-import { serializeScene, loadScene } from "./engine/scene.js";
-import { saveScene, openScene } from "./engine/fileio.js";
-import { spawnBall } from "./game/ball.js";
+  serializeScene,
+  loadScene,
+  saveScene,
+  openScene,
+  spawnBall,
+  randomBallColor,
+} from "@bloobitygook/engine";
+import { findBallAt, isGravityMarkerVisible, isPlaceGravityButtonEnabled, statusText } from "./ui-helpers.js";
 
 const stage = document.getElementById("stage");
 const worldEl = document.getElementById("world");
@@ -53,28 +58,6 @@ function toStagePoint(clientX, clientY) {
   return pt.matrixTransform(stage.getScreenCTM().inverse());
 }
 
-// Small local HSL->hex conversion so every ball's color is a hex string —
-// the inspector's <input type="color"> can only display/edit hex, so
-// keeping colors in one format avoids a mismatch between swatch and ball.
-function hslToHex(h, s, l) {
-  s /= 100;
-  l /= 100;
-  const k = (n) => (n + h / 30) % 12;
-  const a = s * Math.min(l, 1 - l);
-  const f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
-  const toHex = (x) => Math.round(255 * x).toString(16).padStart(2, "0");
-  return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
-}
-
-function findBallAt(x, y) {
-  const balls = query(world, ["radius", "x", "y"]);
-  for (let i = balls.length - 1; i >= 0; i--) {
-    const e = balls[i];
-    if (Math.hypot(e.x - x, e.y - y) <= e.radius) return e;
-  }
-  return null;
-}
-
 function selectEntity(entity) {
   if (selected) selected.circleEl.removeAttribute("stroke");
   selected = entity;
@@ -99,7 +82,7 @@ function syncBallVisual(entity) {
 }
 
 function updateGravityMarker() {
-  if (gravity.mode === "point") {
+  if (isGravityMarkerVisible(gravity)) {
     gravityMarkerEl.style.display = "";
     gravityMarkerEl.setAttribute("transform", `translate(${gravity.x} ${gravity.y})`);
   } else {
@@ -108,7 +91,7 @@ function updateGravityMarker() {
 }
 
 function updatePlaceGravityBtnState() {
-  placeGravityBtn.disabled = !(mode === "setup" && gravity.mode === "point");
+  placeGravityBtn.disabled = !isPlaceGravityButtonEnabled(mode, gravity);
 }
 
 function cancelGravityPlacement() {
@@ -127,13 +110,11 @@ function setMode(next) {
   mode = next;
   modeSetupBtn.classList.toggle("active", mode === "setup");
   modeRunBtn.classList.toggle("active", mode === "running");
-  if (mode === "setup") {
-    statusEl.textContent = "Setup — click the stage to place a ball, or click a ball to edit it";
-  } else {
+  if (mode !== "setup") {
     cancelGravityPlacement();
     clearSelection();
-    statusEl.textContent = "Running — physics active";
   }
+  statusEl.textContent = statusText(mode);
   updatePlaceGravityBtnState();
 }
 
@@ -151,7 +132,7 @@ stage.addEventListener("pointerdown", (e) => {
 
   if (mode !== "setup") return;
 
-  const hit = findBallAt(x, y);
+  const hit = findBallAt(world, x, y);
   if (hit) {
     selectEntity(hit);
     return;
@@ -161,7 +142,7 @@ stage.addEventListener("pointerdown", (e) => {
     x,
     y: Math.min(y, bounds.floorY - 20),
     radius: 16 + Math.random() * 24,
-    color: hslToHex(Math.round(Math.random() * 360), 55, 60),
+    color: randomBallColor(),
     restitution: 0.5 + Math.random() * 0.4,
     friction: 0.1 + Math.random() * 0.3,
   });

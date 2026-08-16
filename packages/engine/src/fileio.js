@@ -3,7 +3,7 @@
 // page. Falls back to a plain download/upload on browsers that don't
 // support it (Firefox, Safari), since "save" there can only ever mean
 // "hand the user a new file."
-export const hasFileSystemAccess = "showSaveFilePicker" in window;
+export const hasFileSystemAccess = typeof window !== "undefined" && "showSaveFilePicker" in window;
 
 const JSON_FILE_TYPE = {
   description: "Scene JSON",

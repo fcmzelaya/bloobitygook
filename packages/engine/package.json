@@ -1,0 +1,17 @@
+{
+  "name": "@bloobitygook/engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0",
+    "jsdom": "^27.0.1"
+  }
+}

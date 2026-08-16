@@ -2,10 +2,16 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "bloobitygook",
-      "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "5173"],
-      "port": 5173
+      "name": "play",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@bloobitygook/play", "dev"],
+      "port": 5175
+    },
+    {
+      "name": "editor",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@bloobitygook/editor", "dev"],
+      "port": 5176
     }
   ]
 }

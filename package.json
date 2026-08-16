@@ -1,0 +1,13 @@
+{
+  "name": "bloobitygook",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@11.22.0",
+  "scripts": {
+    "dev:play": "pnpm --filter @bloobitygook/play dev",
+    "dev:editor": "pnpm --filter @bloobitygook/editor dev",
+    "build": "pnpm --filter @bloobitygook/play build && pnpm --filter @bloobitygook/editor build",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint"
+  }
+}
