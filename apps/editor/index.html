@@ -27,7 +27,7 @@
       align-items: center;
       max-width: calc(100vw - 24px);
     }
-    #toolbar button, #toolbar select {
+    #toolbar button, #toolbar select, #toolbar input[type="text"] {
       font: inherit;
       font-size: 13px;
       padding: 6px 12px;
@@ -37,6 +37,7 @@
       color: #dfe4ee;
       cursor: pointer;
     }
+    #toolbar input[type="text"] { cursor: text; }
     #toolbar button:hover, #toolbar select:hover { background: #2a3244; }
     #toolbar button.active {
       background: #3a4a63;
@@ -54,6 +55,12 @@
     }
     #gravity-magnitude {
       width: 100px;
+    }
+    #toolbar input#scene-id {
+      width: 90px;
+    }
+    .hidden {
+      display: none !important;
     }
     #status {
       font-size: 12px;
@@ -140,6 +147,11 @@
     </select>
     <input id="gravity-magnitude" type="range" min="0" max="2000" step="10" value="900" title="Gravity strength" />
     <button id="place-gravity-btn" disabled>Place Point</button>
+    <div class="divider cloud-only hidden"></div>
+    <input id="scene-id" class="cloud-only hidden" type="text" value="default" placeholder="scene id" />
+    <button id="publish-btn" class="cloud-only hidden" disabled title="Sign in to publish">Publish</button>
+    <button id="load-cloud-btn" class="cloud-only hidden">Load from Cloud</button>
+    <button id="signin-btn" class="cloud-only hidden">Sign in</button>
     <span id="status">Click the stage to drop a ball</span>
   </div>
 

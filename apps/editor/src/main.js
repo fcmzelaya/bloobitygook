@@ -16,6 +16,7 @@ import {
   randomBallColor,
 } from "@bloobitygook/engine";
 import { findBallAt, isGravityMarkerVisible, isPlaceGravityButtonEnabled, statusText } from "./ui-helpers.js";
+import { isCloudEnabled, signIn, signOut, onAuthChange, publishScene, fetchPublishedScene } from "./publish.js";
 
 const stage = document.getElementById("stage");
 const worldEl = document.getElementById("world");
@@ -36,6 +37,11 @@ const propRestitution = document.getElementById("prop-restitution");
 const propFriction = document.getElementById("prop-friction");
 const deleteBtn = document.getElementById("delete-btn");
 
+const sceneIdInput = document.getElementById("scene-id");
+const publishBtn = document.getElementById("publish-btn");
+const loadCloudBtn = document.getElementById("load-cloud-btn");
+const signinBtn = document.getElementById("signin-btn");
+
 const bounds = { floorY: 560, left: 0, right: 800 };
 const world = createWorld();
 let gravity = { mode: "uniform", magnitude: 900, x: 400, y: 300 };
@@ -43,6 +49,7 @@ let fileHandle = null; // reused so repeat Saves overwrite in place, not re-prom
 let mode = "setup"; // "setup" (frozen, editable) or "running" (physics live)
 let selected = null;
 let placingGravityPoint = false;
+let currentUser = null;
 
 async function loadDefaultScene() {
   const res = await fetch("./scenes/default.json");
@@ -219,6 +226,48 @@ document.getElementById("open-btn").addEventListener("click", async () => {
   }
 });
 
+if (isCloudEnabled) {
+  document.querySelectorAll(".cloud-only").forEach((el) => el.classList.remove("hidden"));
+  onAuthChange((user) => {
+    currentUser = user;
+    signinBtn.textContent = user ? `Sign out (${user.email})` : "Sign in";
+    publishBtn.disabled = !user;
+  });
+}
+
+signinBtn.addEventListener("click", async () => {
+  try {
+    if (currentUser) await signOut();
+    else await signIn();
+  } catch (err) {
+    statusEl.textContent = `Sign-in failed: ${err.message}`;
+  }
+});
+
+publishBtn.addEventListener("click", async () => {
+  if (!currentUser) return;
+  const sceneId = sceneIdInput.value.trim() || "default";
+  try {
+    await publishScene(sceneId, serializeScene(world, gravity));
+    statusEl.textContent = `Published "${sceneId}"`;
+  } catch (err) {
+    statusEl.textContent = `Publish failed: ${err.message}`;
+  }
+});
+
+loadCloudBtn.addEventListener("click", async () => {
+  const sceneId = sceneIdInput.value.trim() || "default";
+  try {
+    const data = await fetchPublishedScene(sceneId);
+    gravity = loadScene(world, worldEl, data);
+    clearSelection();
+    refreshGravityUI();
+    statusEl.textContent = `Loaded "${sceneId}" from cloud`;
+  } catch (err) {
+    statusEl.textContent = `Cloud load failed: ${err.message}`;
+  }
+});
+
 function update(dt) {
   if (mode !== "running") return; // setup mode freezes the simulation for editing
   gravitySystem(world, dt, gravity);
@@ -232,6 +281,8 @@ function render() {
   renderSystem(world);
 }
 
-await loadDefaultScene();
-setMode("setup");
-startLoop({ update, render });
+(async () => {
+  await loadDefaultScene();
+  setMode("setup");
+  startLoop({ update, render });
+})();

@@ -1,0 +1,17 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /scenes/{sceneId} {
+      // Published scenes are public so apps/play (and anyone) can load
+      // them unauthenticated. Only the allowlisted collaborators below
+      // can publish/overwrite one. Fill in real emails before deploying —
+      // this file ships empty on purpose so nothing is writable by
+      // accident.
+      allow read: if true;
+      allow write: if request.auth != null
+        && request.auth.token.email in [
+          // "you@example.com",
+        ];
+    }
+  }
+}
