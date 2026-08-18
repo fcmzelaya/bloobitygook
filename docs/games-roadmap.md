@@ -1,4 +1,4 @@
-# Games roadmap: Tetris → Pac-Man → Mario vs. Donkey Kong
+# Games roadmap: Tetris → Pac-Man → Platformer
 
 ## Context
 
@@ -36,7 +36,9 @@ This doc assumes the three games get built **inside bloobitygook**, as new apps 
 10. **Portals/tunnels** — a zone that teleports an entity on entry. This is the second real use of "trigger" (after row-completion) — the point where generalizing into a small `triggers` system (zone + condition + action) actually pays for itself.
 11. **Ghost behavior** — a minimal per-entity state machine (`chase`/`scatter`/`flee`, each mapping to a target-seeking movement rule) driving movement every tick, independent of player input.
 
-### For the Mario vs. Donkey Kong platformer (adds on top of both prior)
+### For the platformer (adds on top of both prior)
+
+A generic capability demo, not a specific-IP clone — no fixed level layouts or named enemies to build toward, just the motor/hazard/goal mechanics below, exercised well enough to prove the capability. Simplifies scope and sidesteps cloning someone else's specific game design.
 12. **Platformer motor** — gravity + jump impulse + ground detection, ladders (vertical move, gravity suspended while climbing), one-way platforms, moving platforms that carry whatever's standing on them.
 13. **Hazard/enemy behavior** — rolling barrels etc., reusing the behavior system from #11 with a new "patrol/roll downhill" rule.
 14. **Goal/level-complete trigger** — reuses the trigger system from #10.
@@ -110,5 +112,5 @@ Each phase closes with the same checkpoint discipline used for the physics engin
 ## Open decisions
 
 - ~~Board scale~~ — resolved: classic 10×20 grid, 24px cells (240×480 board), own viewBox rather than reusing the blob demo's 800×600 — Tetris doesn't need that canvas size and a tighter board reads better.
-- **Platformer fidelity**: how literal a "Mario vs. Donkey Kong" clone (specific level layouts, specific enemy types) vs. a generic platformer capability demo is the actual goal?
-- **React tooling choice**: plain React + Vite's React plugin is the obvious default for `apps/editor`; flag now if you'd rather use something else (Preact for a lighter footprint, a meta-framework, etc.) before Phase 2 wiring starts.
+- ~~Platformer fidelity~~ — resolved: generic capability demo, not a specific-IP clone. See the platformer section above.
+- ~~React tooling choice~~ — resolved (by doing it): plain React + Vite's React plugin, already shipped in Phase 2.
