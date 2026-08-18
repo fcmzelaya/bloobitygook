@@ -1,5 +1,6 @@
 import { createWorld, query, destroy, clearChildren, startLoop } from "@bloobitygook/engine";
 import { canPlace, checkCompleteRows, cellKey, absoluteCells, renderCellGroup, spawnBlock, moveBlockRow } from "@bloobitygook/grid";
+import { createTrigger, runTriggers } from "@bloobitygook/triggers";
 import { spawnPiece, cellsForRotation, randomPieceType } from "./pieces.js";
 
 const COLS = 10;
@@ -49,6 +50,16 @@ function endGame() {
   statusEl.classList.add("game-over");
 }
 
+// The trigger system's first real use case: "which rows are complete" is
+// the condition, "clear them and shift everything above down" is the
+// action. Reading `occupied`/`world` from the closure rather than
+// passing them through the trigger's own `world` arg since Tetris keeps
+// its board state (occupied cells) separately from the ECS world.
+const lineClearTrigger = createTrigger({
+  condition: () => checkCompleteRows(occupied, BOUNDS),
+  action: (_world, rows) => clearRows(rows),
+});
+
 function lockPiece() {
   const color = current.color;
   for (const cell of absoluteCells(current)) {
@@ -59,9 +70,9 @@ function lockPiece() {
   current.el.remove();
   current = null;
 
-  const completeRows = checkCompleteRows(occupied, BOUNDS);
-  if (completeRows.length > 0) clearRows(completeRows);
-  score += LINE_SCORES[completeRows.length] ?? 0;
+  const fired = runTriggers(world, [lineClearTrigger]);
+  const clearedCount = fired[0]?.matches.length ?? 0;
+  score += LINE_SCORES[clearedCount] ?? 0;
   scoreEl.textContent = String(score);
 
   spawnNext();

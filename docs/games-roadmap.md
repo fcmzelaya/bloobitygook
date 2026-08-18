@@ -79,19 +79,20 @@ Grows incrementally — this is the target shape once the platform pieces and al
 
 ```
 packages/
-  engine/       (existing — pure ECS core: world, svg, loop, scene, color; stays game-agnostic)
-  physics/      (today's physics.js content, renamed/moved — continuous bounce physics, used only by the blob demo)
-  grid/         (new, for Tetris — kinematic movement, blocking collision, composite/group entities)
-  triggers/     (new, generalized once Pac-Man needs a second use — zone + condition + action)
-  animation/    (new, for Pac-Man — sprite frames)
-  behavior/     (new, for Pac-Man's ghosts; extended for platformer enemies)
-  platformer/   (new, for the final game — gravity/jump/ladders/moving platforms)
-  game-manifest/ (new — shared shape/helpers for games/<id>/manifest.json, used by hub + editor + wizard)
+  engine/        ✅ pure ECS core: world, svg, loop, scene, color; stays game-agnostic
+  physics/       — not actually split out yet; today's physics.js still lives inside packages/engine, used only by the blob demo. Low priority since nothing's forced the split.
+  grid/          ✅ for Tetris — kinematic movement, blocking collision, composite/group entities
+  triggers/      ✅ generic condition→action; validated against Tetris's line-clear, portals will be its second use
+  animation/     ✅ frame-based sprite animation (SVG attribute swaps)
+  behavior/      ✅ v1 — generic state machine + seek/flee movement primitives
+  platformer/    (new, for the final game — gravity/jump/ladders/moving platforms)
+  game-manifest/ ✅ shared shape/helpers for games/<id>/manifest.json, used by hub + editor + wizard
 
 apps/
-  play, editor      (existing — the blob physics demo; editor gains React chrome, see above)
-  hub               (new — public games list, reads the manifest)
-  tetris, pacman, platformer   (new)
+  play, editor      ✅ the blob physics demo; editor's UI chrome is now React
+  hub               ✅ public games list, reads the manifest
+  tetris            ✅ playable
+  pacman, platformer   (new)
 ```
 
 ## Build order
@@ -102,7 +103,10 @@ apps/
    - **Bug found via this verification, fixed**: `storage.rules` never had a rule for the `games/` path at all (only `scenes/`), so the hub's read was silently denied by Storage's implicit deny. Added `match /games/{allPaths=**} { allow read: if true; ... }`, same allowlist-on-write pattern as scenes. Confirmed deployed (a live read returned an empty list, not `storage/unauthorized`).
    - **The wizard** ✅ turned out to be two different things depending on what gap you're filling — a browser page can't write repo files or push commits on its own. Built as: `apps/editor/src/scaffold/template.js` (pure — generates a minimal engine-connected app shell: package.json/vite.config.js/index.html/src/main.js, no game logic of its own) + `scaffold/repo-edits.js` (pure — patches the *fetched* current content of root `package.json` and `scripts/compose-site.mjs` to register the new app, not a hardcoded copy) + `github-wizard.js` (Octokit: branch off `main`, write all the files, open a PR — auth is a user-supplied fine-grained GitHub PAT, stored in `localStorage` only, never touches Firebase). New "New Game" toolbar panel wired to it. 26 new tests (all mocking Octokit — never touches the real repo). **Not automated**: adding the new app's build step to `.github/workflows/ci.yml`/`deploy.yml` — left as a checklist item in the PR body rather than patched via fragile YAML string-editing.
    - **React editor migration** ✅ Scoped narrowly, as planned: `packages/engine`/`grid`/`game-manifest` and every gameplay app stay plain JS, untouched. Only `apps/editor`'s UI chrome moved. Split into an imperative `engine.js` (owns the physics `world`, the SVG stage's pointer handling, and the 60fps render loop — none of that belongs in React's re-render model) exposing a `useSyncExternalStore`-compatible store, plus React components (`Stage`, `Toolbar`, `Inspector`, `GamesPanel`, `WizardPanel`) that read it and call its action functions. `Stage` hands the physics loop a ref to `#world` via `useEffect` and never re-renders its contents — React and the imperative ball-rendering code share the same SVG tree without conflict. `publish.js`/`games.js`/`github-wizard.js`/`scaffold/*` needed zero changes (they never depended on the DOM), so their existing tests kept passing verbatim through the whole migration — good confirmation that pulling the pure logic out early paid off. All CSS stayed untouched (same ids/classes, JSX just generates the same DOM a different way). Full manual parity re-verified against every check from the original vanilla-JS pass. One real gap the verification caught: several `id` attributes (inspector fields, games/wizard form fields) got dropped as "not needed for CSS" during the port and had to be restored — a reminder that "not styled by it" isn't the same as "safe to drop."
-4. **Phase 3 — Pac-Man foundations**: `packages/animation`, generalize `packages/triggers` (row-clear + portals as its first two use cases), `packages/behavior` v1 (ghost state machine).
+4. **Phase 3 — Pac-Man foundations** ✅ `packages/animation` (frame-based, swaps SVG attributes rather than loading image assets — consistent with how the rest of the engine renders; `advanceAnimation` is a pure step function separated from the ECS loop, handles large `dt` correctly via a `while` loop rather than falling behind by one frame). `packages/triggers` (`createTrigger`/`runTriggers` — generic condition→action, zero dependencies; `runTriggers` returns which triggers fired and their matches, so callers like Tetris's scoring don't need to re-derive what happened). `packages/behavior` v1 (a generic state machine — `createBehavior`/`stepBehavior`/`behaviorSystem` — plus `seekToward`/`fleeFrom` movement primitives; deliberately has no "ghost" concept baked in, chase/scatter/flee are just state *names* a future `apps/pacman` would configure using these building blocks).
+   - **Validated the triggers abstraction against real, already-shipped behavior**, not just new unit tests: retrofitted Tetris's line-clearing (previously an inline `checkCompleteRows` + `clearRows` call in `apps/tetris`) to run through a `lineClearTrigger` via `runTriggers`. Confirmed byte-identical results before/after against the same constructed scenario used when Tetris first shipped (1 row cleared, 100 points, block above correctly shifted down). This is real evidence the "row-clear and portals are the same shape" bet from the roadmap's context section actually holds, not just an assumption.
+   - `packages/animation`/`packages/behavior` are unit-tested only — no app exists yet to validate them against real usage the way triggers got validated against Tetris. That's what Phase 4 (actually building Pac-Man) is for.
+   - 104 tests passing workspace-wide (up from 75).
 5. **Phase 4 — Build Pac-Man** on Phases 0–3, wired into the wizard/hub as a second template.
 6. **Phase 5 — Platformer foundations**: `packages/platformer`, extend `packages/behavior` for enemies/hazards.
 7. **Phase 6 — Build the platformer** on everything prior, third wizard template.
