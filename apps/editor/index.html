@@ -279,76 +279,7 @@
   </style>
 </head>
 <body>
-  <div id="toolbar">
-    <button id="mode-setup-btn" class="active">Setup</button>
-    <button id="mode-run-btn">Run</button>
-    <div class="divider"></div>
-    <button id="save-btn">Save Scene</button>
-    <button id="open-btn">Open Scene</button>
-    <div class="divider"></div>
-    <select id="gravity-mode">
-      <option value="uniform">Gravity: Earth</option>
-      <option value="point">Gravity: Point</option>
-    </select>
-    <input id="gravity-magnitude" type="range" min="0" max="2000" step="10" value="900" title="Gravity strength" />
-    <button id="place-gravity-btn" disabled>Place Point</button>
-    <div class="divider cloud-only hidden"></div>
-    <input id="scene-id" class="cloud-only hidden" type="text" value="default" placeholder="scene id" />
-    <button id="publish-btn" class="cloud-only hidden" disabled title="Sign in to publish">Publish</button>
-    <button id="load-cloud-btn" class="cloud-only hidden">Load from Cloud</button>
-    <button id="games-btn" class="cloud-only hidden">Manage Games</button>
-    <div class="divider"></div>
-    <button id="wizard-btn">New Game</button>
-    <button id="signin-btn" class="cloud-only hidden">Sign in</button>
-    <span id="status">Click the stage to drop a ball</span>
-  </div>
-
-  <div id="games-panel">
-    <h3>Games</h3>
-    <label>ID (used in the route)<input id="game-id" type="text" placeholder="tetris" /></label>
-    <label>Title<input id="game-title" type="text" placeholder="Tetris" /></label>
-    <label>Description<input id="game-description" type="text" placeholder="Classic falling blocks" /></label>
-    <label>Route<input id="game-route" type="text" placeholder="/tetris/" /></label>
-    <div class="checkbox-row">
-      <input id="game-published" type="checkbox" />
-      <label for="game-published">Published (visible on the hub)</label>
-    </div>
-    <button id="save-game-btn" disabled title="Sign in to publish">Save Game Listing</button>
-    <div id="games-list"></div>
-  </div>
-
-  <div id="wizard-panel">
-    <h3>New Game</h3>
-    <p class="hint">Scaffolds a minimal app under apps/&lt;id&gt; and opens a GitHub PR — it's a starting shell, not a finished game.</p>
-    <label>ID (lowercase, no spaces)<input id="wizard-id" type="text" placeholder="pong" /></label>
-    <label>Title<input id="wizard-title" type="text" placeholder="Pong" /></label>
-    <label>Description<input id="wizard-description" type="text" placeholder="A paddle game" /></label>
-    <label>Dev port<input id="wizard-port" type="text" value="5181" /></label>
-    <label>GitHub token (repo-scoped, stored only in this browser)<input id="wizard-token" type="password" placeholder="github_pat_…" /></label>
-    <button id="forget-token-btn" type="button">Forget saved token</button>
-    <button id="create-pr-btn" disabled>Create Pull Request</button>
-    <div id="wizard-status"></div>
-  </div>
-
-  <div id="inspector">
-    <h3>Ball <span class="close-btn" id="inspector-close">&times;</span></h3>
-    <label>Radius<input id="prop-radius" type="number" min="4" max="120" step="1" /></label>
-    <label>Color<input id="prop-color" type="color" /></label>
-    <label>Restitution (elasticity)<input id="prop-restitution" type="number" min="0" max="1" step="0.01" /></label>
-    <label>Friction<input id="prop-friction" type="number" min="0" max="1" step="0.01" /></label>
-    <button id="delete-btn">Delete</button>
-  </div>
-
-  <svg id="stage" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid meet">
-    <rect x="0" y="0" width="800" height="600" fill="#1a1f2b" />
-    <rect id="floor" x="0" y="560" width="800" height="40" fill="#232a39" />
-    <g id="world"></g>
-    <g id="gravity-marker" style="display: none">
-      <circle r="6" fill="none" stroke="#e0d15e" stroke-width="2" />
-      <line x1="-10" y1="0" x2="10" y2="0" stroke="#e0d15e" stroke-width="1" />
-      <line x1="0" y1="-10" x2="0" y2="10" stroke="#e0d15e" stroke-width="1" />
-    </g>
-  </svg>
-  <script type="module" src="./src/main.js"></script>
+  <div id="root"></div>
+  <script type="module" src="./src/main.jsx"></script>
 </body>
 </html>
