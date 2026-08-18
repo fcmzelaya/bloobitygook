@@ -18,6 +18,7 @@ import {
 import { findBallAt, isGravityMarkerVisible, isPlaceGravityButtonEnabled, statusText } from "./ui-helpers.js";
 import { isCloudEnabled, signIn, signOut, onAuthChange, publishScene, fetchPublishedScene } from "./publish.js";
 import { publishGame, listGames } from "./games.js";
+import { createGithubClient, createGamePR } from "./github-wizard.js";
 
 const stage = document.getElementById("stage");
 const worldEl = document.getElementById("world");
@@ -52,6 +53,18 @@ const gameRouteInput = document.getElementById("game-route");
 const gamePublishedInput = document.getElementById("game-published");
 const saveGameBtn = document.getElementById("save-game-btn");
 const gamesListEl = document.getElementById("games-list");
+
+const wizardBtn = document.getElementById("wizard-btn");
+const wizardPanel = document.getElementById("wizard-panel");
+const wizardIdInput = document.getElementById("wizard-id");
+const wizardTitleInput = document.getElementById("wizard-title");
+const wizardDescriptionInput = document.getElementById("wizard-description");
+const wizardPortInput = document.getElementById("wizard-port");
+const wizardTokenInput = document.getElementById("wizard-token");
+const forgetTokenBtn = document.getElementById("forget-token-btn");
+const createPrBtn = document.getElementById("create-pr-btn");
+const wizardStatusEl = document.getElementById("wizard-status");
+const GITHUB_TOKEN_STORAGE_KEY = "bloobitygook:wizard:github-token";
 
 const bounds = { floorY: 560, left: 0, right: 800 };
 const world = createWorld();
@@ -327,6 +340,62 @@ saveGameBtn.addEventListener("click", async () => {
     refreshGamesList();
   } catch (err) {
     statusEl.textContent = `Save game failed: ${err.message}`;
+  }
+});
+
+wizardTokenInput.value = localStorage.getItem(GITHUB_TOKEN_STORAGE_KEY) ?? "";
+
+function updateCreatePrBtnState() {
+  createPrBtn.disabled = !(wizardIdInput.value.trim() && wizardTitleInput.value.trim() && wizardTokenInput.value.trim());
+}
+[wizardIdInput, wizardTitleInput, wizardTokenInput].forEach((el) =>
+  el.addEventListener("input", updateCreatePrBtnState)
+);
+updateCreatePrBtnState();
+
+wizardTokenInput.addEventListener("change", () => {
+  localStorage.setItem(GITHUB_TOKEN_STORAGE_KEY, wizardTokenInput.value);
+});
+
+forgetTokenBtn.addEventListener("click", () => {
+  wizardTokenInput.value = "";
+  localStorage.removeItem(GITHUB_TOKEN_STORAGE_KEY);
+  updateCreatePrBtnState();
+});
+
+wizardBtn.addEventListener("click", () => {
+  wizardPanel.classList.toggle("visible");
+});
+
+createPrBtn.addEventListener("click", async () => {
+  const id = wizardIdInput.value.trim();
+  const title = wizardTitleInput.value.trim();
+  const description = wizardDescriptionInput.value.trim();
+  const port = Number(wizardPortInput.value.trim()) || 5181;
+  const token = wizardTokenInput.value.trim();
+  if (!id || !title || !token) return;
+
+  if (!/^[a-z0-9-]+$/.test(id)) {
+    wizardStatusEl.textContent = 'ID must be lowercase letters, numbers, or hyphens only (e.g. "pong").';
+    return;
+  }
+
+  createPrBtn.disabled = true;
+  wizardStatusEl.textContent = "Creating branch and opening a pull request…";
+  try {
+    const octokit = createGithubClient(token);
+    const prUrl = await createGamePR(octokit, { id, title, description, port });
+    wizardStatusEl.textContent = "Pull request opened: ";
+    const link = document.createElement("a");
+    link.href = prUrl;
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.textContent = prUrl;
+    wizardStatusEl.appendChild(link);
+  } catch (err) {
+    wizardStatusEl.textContent = `Failed: ${err.message}`;
+  } finally {
+    updateCreatePrBtnState();
   }
 });
 

@@ -12,6 +12,7 @@
   "dependencies": {
     "@bloobitygook/engine": "workspace:*",
     "@bloobitygook/game-manifest": "workspace:*",
+    "@octokit/rest": "^21.0.0",
     "firebase": "^11.0.0"
   },
   "devDependencies": {

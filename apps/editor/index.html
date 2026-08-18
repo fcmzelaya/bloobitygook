@@ -203,6 +203,79 @@
     #games-list div:hover {
       color: #dfe4ee;
     }
+
+    #wizard-panel {
+      position: fixed;
+      bottom: 12px;
+      left: 292px;
+      width: 280px;
+      background: #1a1f2b;
+      border: 1px solid #3a4152;
+      border-radius: 8px;
+      padding: 12px;
+      color: #dfe4ee;
+      font-size: 13px;
+      display: none;
+    }
+    #wizard-panel.visible { display: block; }
+    #wizard-panel h3 {
+      margin: 0 0 4px;
+      font-size: 13px;
+    }
+    #wizard-panel .hint {
+      font-size: 11px;
+      color: #8b93a7;
+      margin: 0 0 8px;
+    }
+    #wizard-panel label {
+      display: block;
+      margin-top: 8px;
+      font-size: 11px;
+      color: #8b93a7;
+    }
+    #wizard-panel input {
+      width: 100%;
+      box-sizing: border-box;
+      margin-top: 3px;
+      background: #10131a;
+      border: 1px solid #3a4152;
+      border-radius: 4px;
+      color: #dfe4ee;
+      font: inherit;
+      padding: 4px 6px;
+    }
+    #forget-token-btn {
+      background: none;
+      border: none;
+      color: #6b7284;
+      font-size: 11px;
+      cursor: pointer;
+      padding: 0;
+      margin-top: 4px;
+      text-decoration: underline;
+    }
+    #create-pr-btn {
+      margin-top: 12px;
+      width: 100%;
+      font: inherit;
+      padding: 6px;
+      border-radius: 6px;
+      border: 1px solid #3a4152;
+      background: #1e2431;
+      color: #dfe4ee;
+      cursor: pointer;
+    }
+    #create-pr-btn:hover { background: #2a3244; }
+    #create-pr-btn:disabled { opacity: 0.4; cursor: default; }
+    #wizard-status {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #8b93a7;
+      word-break: break-word;
+    }
+    #wizard-status a {
+      color: #7ea8d8;
+    }
   </style>
 </head>
 <body>
@@ -224,6 +297,8 @@
     <button id="publish-btn" class="cloud-only hidden" disabled title="Sign in to publish">Publish</button>
     <button id="load-cloud-btn" class="cloud-only hidden">Load from Cloud</button>
     <button id="games-btn" class="cloud-only hidden">Manage Games</button>
+    <div class="divider"></div>
+    <button id="wizard-btn">New Game</button>
     <button id="signin-btn" class="cloud-only hidden">Sign in</button>
     <span id="status">Click the stage to drop a ball</span>
   </div>
@@ -240,6 +315,19 @@
     </div>
     <button id="save-game-btn" disabled title="Sign in to publish">Save Game Listing</button>
     <div id="games-list"></div>
+  </div>
+
+  <div id="wizard-panel">
+    <h3>New Game</h3>
+    <p class="hint">Scaffolds a minimal app under apps/&lt;id&gt; and opens a GitHub PR — it's a starting shell, not a finished game.</p>
+    <label>ID (lowercase, no spaces)<input id="wizard-id" type="text" placeholder="pong" /></label>
+    <label>Title<input id="wizard-title" type="text" placeholder="Pong" /></label>
+    <label>Description<input id="wizard-description" type="text" placeholder="A paddle game" /></label>
+    <label>Dev port<input id="wizard-port" type="text" value="5181" /></label>
+    <label>GitHub token (repo-scoped, stored only in this browser)<input id="wizard-token" type="password" placeholder="github_pat_…" /></label>
+    <button id="forget-token-btn" type="button">Forget saved token</button>
+    <button id="create-pr-btn" disabled>Create Pull Request</button>
+    <div id="wizard-status"></div>
   </div>
 
   <div id="inspector">
