@@ -17,6 +17,7 @@ import {
 } from "@bloobitygook/engine";
 import { findBallAt, isGravityMarkerVisible, isPlaceGravityButtonEnabled, statusText } from "./ui-helpers.js";
 import { isCloudEnabled, signIn, signOut, onAuthChange, publishScene, fetchPublishedScene } from "./publish.js";
+import { publishGame, listGames } from "./games.js";
 
 const stage = document.getElementById("stage");
 const worldEl = document.getElementById("world");
@@ -40,7 +41,17 @@ const deleteBtn = document.getElementById("delete-btn");
 const sceneIdInput = document.getElementById("scene-id");
 const publishBtn = document.getElementById("publish-btn");
 const loadCloudBtn = document.getElementById("load-cloud-btn");
+const gamesBtn = document.getElementById("games-btn");
 const signinBtn = document.getElementById("signin-btn");
+
+const gamesPanel = document.getElementById("games-panel");
+const gameIdInput = document.getElementById("game-id");
+const gameTitleInput = document.getElementById("game-title");
+const gameDescriptionInput = document.getElementById("game-description");
+const gameRouteInput = document.getElementById("game-route");
+const gamePublishedInput = document.getElementById("game-published");
+const saveGameBtn = document.getElementById("save-game-btn");
+const gamesListEl = document.getElementById("games-list");
 
 const bounds = { floorY: 560, left: 0, right: 800 };
 const world = createWorld();
@@ -232,6 +243,7 @@ if (isCloudEnabled) {
     currentUser = user;
     signinBtn.textContent = user ? `Sign out (${user.email})` : "Sign in";
     publishBtn.disabled = !user;
+    saveGameBtn.disabled = !user;
   });
 }
 
@@ -265,6 +277,56 @@ loadCloudBtn.addEventListener("click", async () => {
     statusEl.textContent = `Loaded "${sceneId}" from cloud`;
   } catch (err) {
     statusEl.textContent = `Cloud load failed: ${err.message}`;
+  }
+});
+
+async function refreshGamesList() {
+  gamesListEl.textContent = "Loading…";
+  try {
+    const games = await listGames();
+    gamesListEl.textContent = "";
+    if (games.length === 0) {
+      gamesListEl.textContent = "No games published yet.";
+      return;
+    }
+    for (const game of games) {
+      const row = document.createElement("div");
+      row.textContent = `${game.title} — ${game.published ? "published" : "draft"}`;
+      row.addEventListener("click", () => fillGameForm(game));
+      gamesListEl.appendChild(row);
+    }
+  } catch (err) {
+    gamesListEl.textContent = `Couldn't load games: ${err.message}`;
+  }
+}
+
+function fillGameForm(game) {
+  gameIdInput.value = game.id;
+  gameTitleInput.value = game.title;
+  gameDescriptionInput.value = game.description;
+  gameRouteInput.value = game.route;
+  gamePublishedInput.checked = game.published;
+}
+
+gamesBtn.addEventListener("click", () => {
+  gamesPanel.classList.toggle("visible");
+  if (gamesPanel.classList.contains("visible")) refreshGamesList();
+});
+
+saveGameBtn.addEventListener("click", async () => {
+  if (!currentUser) return;
+  try {
+    const game = await publishGame({
+      id: gameIdInput.value.trim(),
+      title: gameTitleInput.value.trim(),
+      description: gameDescriptionInput.value.trim(),
+      route: gameRouteInput.value.trim(),
+      published: gamePublishedInput.checked,
+    });
+    statusEl.textContent = `Saved game listing "${game.title}"`;
+    refreshGamesList();
+  } catch (err) {
+    statusEl.textContent = `Save game failed: ${err.message}`;
   }
 });
 

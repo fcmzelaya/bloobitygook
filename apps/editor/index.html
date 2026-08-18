@@ -131,6 +131,78 @@
     #gravity-marker {
       pointer-events: none;
     }
+
+    #games-panel {
+      position: fixed;
+      bottom: 12px;
+      left: 12px;
+      width: 260px;
+      background: #1a1f2b;
+      border: 1px solid #3a4152;
+      border-radius: 8px;
+      padding: 12px;
+      color: #dfe4ee;
+      font-size: 13px;
+      display: none;
+    }
+    #games-panel.visible { display: block; }
+    #games-panel h3 {
+      margin: 0 0 10px;
+      font-size: 13px;
+    }
+    #games-panel label {
+      display: block;
+      margin-top: 8px;
+      font-size: 11px;
+      color: #8b93a7;
+    }
+    #games-panel input[type="text"] {
+      width: 100%;
+      box-sizing: border-box;
+      margin-top: 3px;
+      background: #10131a;
+      border: 1px solid #3a4152;
+      border-radius: 4px;
+      color: #dfe4ee;
+      font: inherit;
+      padding: 4px 6px;
+    }
+    #games-panel .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    #games-panel .checkbox-row label {
+      margin-top: 0;
+    }
+    #save-game-btn {
+      margin-top: 12px;
+      width: 100%;
+      font: inherit;
+      padding: 6px;
+      border-radius: 6px;
+      border: 1px solid #3a4152;
+      background: #1e2431;
+      color: #dfe4ee;
+      cursor: pointer;
+    }
+    #save-game-btn:hover { background: #2a3244; }
+    #save-game-btn:disabled { opacity: 0.4; cursor: default; }
+    #games-list {
+      margin-top: 12px;
+      font-size: 12px;
+      color: #8b93a7;
+      max-height: 120px;
+      overflow-y: auto;
+    }
+    #games-list div {
+      padding: 3px 0;
+      cursor: pointer;
+    }
+    #games-list div:hover {
+      color: #dfe4ee;
+    }
   </style>
 </head>
 <body>
@@ -151,8 +223,23 @@
     <input id="scene-id" class="cloud-only hidden" type="text" value="default" placeholder="scene id" />
     <button id="publish-btn" class="cloud-only hidden" disabled title="Sign in to publish">Publish</button>
     <button id="load-cloud-btn" class="cloud-only hidden">Load from Cloud</button>
+    <button id="games-btn" class="cloud-only hidden">Manage Games</button>
     <button id="signin-btn" class="cloud-only hidden">Sign in</button>
     <span id="status">Click the stage to drop a ball</span>
+  </div>
+
+  <div id="games-panel">
+    <h3>Games</h3>
+    <label>ID (used in the route)<input id="game-id" type="text" placeholder="tetris" /></label>
+    <label>Title<input id="game-title" type="text" placeholder="Tetris" /></label>
+    <label>Description<input id="game-description" type="text" placeholder="Classic falling blocks" /></label>
+    <label>Route<input id="game-route" type="text" placeholder="/tetris/" /></label>
+    <div class="checkbox-row">
+      <input id="game-published" type="checkbox" />
+      <label for="game-published">Published (visible on the hub)</label>
+    </div>
+    <button id="save-game-btn" disabled title="Sign in to publish">Save Game Listing</button>
+    <div id="games-list"></div>
   </div>
 
   <div id="inspector">
