@@ -1,0 +1,15 @@
+[
+  {
+    "origin": [
+      "https://bloobitygook.web.app",
+      "https://bloobitygook-editor.web.app",
+      "http://localhost:5175",
+      "http://localhost:5176",
+      "http://localhost:5178",
+      "http://localhost:5179",
+      "http://localhost:5182"
+    ],
+    "method": ["GET"],
+    "maxAgeSeconds": 3600
+  }
+]
