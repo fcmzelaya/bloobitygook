@@ -1,0 +1,22 @@
+{
+  "name": "@bloobitygook/pacman",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@bloobitygook/engine": "workspace:*",
+    "@bloobitygook/animation": "workspace:*",
+    "@bloobitygook/triggers": "workspace:*",
+    "@bloobitygook/behavior": "workspace:*"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0",
+    "vitest": "^3.0.0"
+  }
+}

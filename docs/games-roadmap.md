@@ -92,7 +92,8 @@ apps/
   play, editor      ✅ the blob physics demo; editor's UI chrome is now React
   hub               ✅ public games list, reads the manifest
   tetris            ✅ playable
-  pacman, platformer   (new)
+  pacman            ✅ playable
+  platformer        (new)
 ```
 
 ## Build order
@@ -107,7 +108,13 @@ apps/
    - **Validated the triggers abstraction against real, already-shipped behavior**, not just new unit tests: retrofitted Tetris's line-clearing (previously an inline `checkCompleteRows` + `clearRows` call in `apps/tetris`) to run through a `lineClearTrigger` via `runTriggers`. Confirmed byte-identical results before/after against the same constructed scenario used when Tetris first shipped (1 row cleared, 100 points, block above correctly shifted down). This is real evidence the "row-clear and portals are the same shape" bet from the roadmap's context section actually holds, not just an assumption.
    - `packages/animation`/`packages/behavior` are unit-tested only — no app exists yet to validate them against real usage the way triggers got validated against Tetris. That's what Phase 4 (actually building Pac-Man) is for.
    - 104 tests passing workspace-wide (up from 75).
-5. **Phase 4 — Build Pac-Man** on Phases 0–3, wired into the wizard/hub as a second template.
+5. **Phase 4 — Build Pac-Man** ✅ `apps/pacman` — tile-locked continuous movement (see below), a hand-authored 11×9 maze with a tunnel row, pellets + power pellets, 2 ghosts running `packages/behavior`'s chase/flee states against `packages/triggers`-powered tunnel portals, a chomp-pulse via `packages/animation`. All three Phase 3 packages now validated against real, playing usage, not just unit tests.
+   - **Real bug found and fixed by the test suite, not by playing**: the first movement implementation found an entity's "current cell" via `Math.round(x / cellSize)` — ambiguous once past a cell's midpoint, so an entity moving right from e.g. 5% into a cell would round to "nearest cell is the one behind me," "arrive" there again, and get stuck oscillating instead of progressing. A test asserting position after several ticks (not just single-call behavior) caught it immediately. Fixed by finding the target cell via direction-aware `floor`/`ceil` instead of symmetric `round`, plus a `while` loop so arriving with leftover movement budget re-decides (turn/continue/stop) immediately rather than one frame late — the earlier single-step version of that fix briefly let a blocked entity's stale direction poke it into the wall for one frame before catching up. Every scenario (straight movement, mid-flight turns, blocked stops, multi-cell passes, accumulation across ticks) was hand-traced against the fixed algorithm before rewriting, not just patched until the failing test went green.
+   - **Maze correctness has an automated safety net, not just a by-hand walkthrough**: a flood-fill/BFS test from the player's spawn point confirms every non-wall cell is reachable — exactly the kind of thing a hand-authored ASCII maze can get subtly wrong (an isolated pocket with an uncollectable pellet) without it being visually obvious.
+   - **Portal wraparound validated against the real maze + trigger code together**, not just in isolation: walked a player entity off the left edge of the tunnel row through real `tryMove` ticks with the real portal triggers running each tick, confirmed it lands on the opposite side at the correct column.
+   - **Scope trims, stated plainly**: "chomp" animation is a radius pulse (frame-attribute swap), not literal mouth-shape path-arc math — proves the animation mechanism without extra geometry work that's polish, not capability. "Scatter" (a third classic ghost state) isn't wired to anything — chase and flee are enough to prove the state-machine + targeting-preference pattern; scatter would just be chase-with-a-different-target, no new mechanism needed if it's ever added.
+   - 131 tests passing workspace-wide (up from 104), including a real algorithmic bug caught before it ever reached the browser.
+6. **Phase 5 — Platformer foundations**: `packages/platformer`, extend `packages/behavior` for enemies/hazards.
 6. **Phase 5 — Platformer foundations**: `packages/platformer`, extend `packages/behavior` for enemies/hazards.
 7. **Phase 6 — Build the platformer** on everything prior, third wizard template.
 

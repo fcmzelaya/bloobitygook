@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>bloobitygook — pacman</title>
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: #10131a;
+      overflow: hidden;
+      font-family: system-ui, sans-serif;
+      color: #dfe4ee;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #layout {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+    #stage {
+      display: block;
+      border: 1px solid #3a4152;
+      border-radius: 4px;
+    }
+    #panel {
+      width: 180px;
+      font-size: 13px;
+    }
+    #panel h1 {
+      font-size: 16px;
+      margin: 0 0 12px;
+    }
+    #score {
+      font-size: 22px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    #status {
+      color: #8b93a7;
+      line-height: 1.5;
+    }
+    #status.game-over {
+      color: #e0a0a0;
+      font-weight: 600;
+    }
+    #controls {
+      margin-top: 16px;
+      color: #6b7284;
+      font-size: 11px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <div id="layout">
+    <svg id="stage" viewBox="0 0 352 288" width="352" height="288">
+      <rect x="0" y="0" width="352" height="288" fill="#050608" />
+      <g id="world"></g>
+    </svg>
+    <div id="panel">
+      <h1>Pac-Man</h1>
+      <div id="score">0</div>
+      <div id="status">Arrow keys to move</div>
+      <div id="controls">
+        &larr;&uarr;&darr;&rarr; move<br />
+        eat pellets to win<br />
+        power pellets let you<br />
+        eat ghosts briefly
+      </div>
+    </div>
+  </div>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

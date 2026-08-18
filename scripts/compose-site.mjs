@@ -14,6 +14,7 @@ const outDir = path.join(root, "dist-site");
 const APPS = [
   ["hub", ""],
   ["tetris", "tetris"],
+  ["pacman", "pacman"],
   ["play", "blob"],
 ];
 

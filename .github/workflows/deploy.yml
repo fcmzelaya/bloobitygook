@@ -25,6 +25,7 @@ jobs:
           VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
       - run: pnpm --filter @bloobitygook/play build
       - run: pnpm --filter @bloobitygook/tetris build
+      - run: pnpm --filter @bloobitygook/pacman build
       - run: pnpm compose
       - run: pnpm --filter @bloobitygook/editor build
         env:

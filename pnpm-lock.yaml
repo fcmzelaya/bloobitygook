@@ -55,6 +55,28 @@ importers:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@26.2.0)(jsdom@27.4.0)
 
+  apps/pacman:
+    dependencies:
+      '@bloobitygook/animation':
+        specifier: workspace:*
+        version: link:../../packages/animation
+      '@bloobitygook/behavior':
+        specifier: workspace:*
+        version: link:../../packages/behavior
+      '@bloobitygook/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
+      '@bloobitygook/triggers':
+        specifier: workspace:*
+        version: link:../../packages/triggers
+    devDependencies:
+      vite:
+        specifier: ^6.0.0
+        version: 6.4.3(@types/node@26.2.0)
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@26.2.0)(jsdom@27.4.0)
+
   apps/play:
     dependencies:
       '@bloobitygook/engine':

@@ -20,6 +20,7 @@ jobs:
       - run: pnpm --filter @bloobitygook/hub build
       - run: pnpm --filter @bloobitygook/play build
       - run: pnpm --filter @bloobitygook/tetris build
+      - run: pnpm --filter @bloobitygook/pacman build
       # publish.js/games-storage.js degrade gracefully without
       # VITE_FIREBASE_* set (cloud UI stays hidden, nothing throws), so
       # this build is a real check even without repo secrets available —
