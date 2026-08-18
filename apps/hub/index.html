@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>bloobitygook</title>
+  <style>
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: #10131a;
+      color: #dfe4ee;
+      font-family: system-ui, sans-serif;
+    }
+    body {
+      padding: 40px 24px;
+    }
+    header {
+      max-width: 900px;
+      margin: 0 auto 32px;
+    }
+    header h1 {
+      font-size: 28px;
+      margin: 0 0 6px;
+    }
+    header p {
+      color: #8b93a7;
+      margin: 0;
+    }
+    #games {
+      max-width: 900px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .game-card {
+      display: block;
+      background: #1a1f2b;
+      border: 1px solid #3a4152;
+      border-radius: 8px;
+      padding: 16px;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color 0.15s;
+    }
+    .game-card:hover {
+      border-color: #5b7ca8;
+    }
+    .game-card h2 {
+      font-size: 16px;
+      margin: 0 0 6px;
+    }
+    .game-card p {
+      font-size: 13px;
+      color: #8b93a7;
+      margin: 0;
+    }
+    #status {
+      max-width: 900px;
+      margin: 0 auto;
+      color: #8b93a7;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>bloobitygook</h1>
+    <p>Small SVG-based games, built one at a time.</p>
+  </header>
+  <div id="games"></div>
+  <p id="status"></p>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

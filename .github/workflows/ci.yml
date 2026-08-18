@@ -17,9 +17,12 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
+      - run: pnpm --filter @bloobitygook/hub build
       - run: pnpm --filter @bloobitygook/play build
-      # publish.js degrades gracefully without VITE_FIREBASE_* set (cloud
-      # UI stays hidden, nothing throws), so this build is a real check
-      # even without repo secrets available — e.g. on PRs from forks.
-      - run: pnpm --filter @bloobitygook/editor build
       - run: pnpm --filter @bloobitygook/tetris build
+      # publish.js/games-storage.js degrade gracefully without
+      # VITE_FIREBASE_* set (cloud UI stays hidden, nothing throws), so
+      # this build is a real check even without repo secrets available —
+      # e.g. on PRs from forks.
+      - run: pnpm --filter @bloobitygook/editor build
+      - run: pnpm compose

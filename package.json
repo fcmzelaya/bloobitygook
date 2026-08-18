@@ -7,7 +7,9 @@
     "dev:play": "pnpm --filter @bloobitygook/play dev",
     "dev:editor": "pnpm --filter @bloobitygook/editor dev",
     "dev:tetris": "pnpm --filter @bloobitygook/tetris dev",
-    "build": "pnpm --filter @bloobitygook/play build && pnpm --filter @bloobitygook/editor build && pnpm --filter @bloobitygook/tetris build",
+    "dev:hub": "pnpm --filter @bloobitygook/hub dev",
+    "build": "pnpm --filter @bloobitygook/hub build && pnpm --filter @bloobitygook/play build && pnpm --filter @bloobitygook/tetris build && pnpm --filter @bloobitygook/editor build && pnpm compose",
+    "compose": "node scripts/compose-site.mjs",
     "test": "pnpm -r test",
     "lint": "pnpm -r lint"
   }

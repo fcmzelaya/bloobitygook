@@ -2,17 +2,11 @@
   "hosting": [
     {
       "target": "play",
-      "public": "apps/play/dist",
+      "public": "dist-site",
       "ignore": [
         "firebase.json",
         "**/.*",
         "**/node_modules/**"
-      ],
-      "rewrites": [
-        {
-          "source": "**",
-          "destination": "/index.html"
-        }
       ]
     },
     {
