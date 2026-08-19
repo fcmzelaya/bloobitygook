@@ -32,3 +32,34 @@ export function checkCompleteRows(occupied, bounds) {
   }
   return complete;
 }
+
+// Which row a surviving cell lands on after `clearedRows` are removed and
+// everything above them falls to fill the gap — every row below all of
+// `clearedRows` is unaffected (shift 0); a row with N cleared rows below
+// it shifts down by N.
+export function rowAfterClear(row, clearedRows) {
+  return row + clearedRows.filter((r) => r > row).length;
+}
+
+// Rebuilds `occupied` from scratch as it should look after clearing
+// `clearedRows`, given `bounds`. Builds a brand-new Set from the current
+// one in a single pass rather than deleting/adding into the existing Set
+// per cell — an in-place delete-then-add per cell is order-dependent
+// (this is the shape of a real bug: two vertically stacked occupied
+// cells in the same column, both shifting down by the same amount, means
+// the lower cell's *new* key equals the upper cell's *current* key —
+// processed as delete/add per-cell, the upper cell's later delete can
+// wipe out the key the lower cell just added, since both are just the
+// same string in one shared Set). Building a new Set sidesteps the
+// ordering question entirely: every entry is computed once, purely, from
+// the untouched original Set.
+export function occupiedAfterClear(occupied, clearedRows) {
+  const clearedSet = new Set(clearedRows);
+  const next = new Set();
+  for (const key of occupied) {
+    const [col, row] = key.split(",").map(Number);
+    if (clearedSet.has(row)) continue;
+    next.add(cellKey(col, rowAfterClear(row, clearedRows)));
+  }
+  return next;
+}

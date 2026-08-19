@@ -1,5 +1,15 @@
 import { createWorld, query, destroy, clearChildren, startLoop } from "@bloobitygook/engine";
-import { canPlace, checkCompleteRows, cellKey, absoluteCells, renderCellGroup, spawnBlock, moveBlockRow } from "@bloobitygook/grid";
+import {
+  canPlace,
+  checkCompleteRows,
+  cellKey,
+  absoluteCells,
+  renderCellGroup,
+  spawnBlock,
+  moveBlockRow,
+  rowAfterClear,
+  occupiedAfterClear,
+} from "@bloobitygook/grid";
 import { createTrigger, runTriggers } from "@bloobitygook/triggers";
 import { spawnPiece, cellsForRotation, randomPieceType } from "./pieces.js";
 
@@ -83,22 +93,17 @@ function clearRows(rows) {
   for (const block of query(world, ["entityType", "col", "row"])) {
     if (block.entityType !== "block") continue;
     if (rowSet.has(block.row)) {
-      occupied.delete(cellKey(block.col, block.row));
       destroy(world, block.id);
       block.el.remove();
+    } else {
+      moveBlockRow(block, rowAfterClear(block.row, rows));
     }
   }
-
-  const sortedRows = [...rows].sort((a, b) => a - b);
-  for (const block of query(world, ["entityType", "col", "row"])) {
-    if (block.entityType !== "block") continue;
-    const shift = sortedRows.filter((r) => r > block.row).length;
-    if (shift > 0) {
-      occupied.delete(cellKey(block.col, block.row));
-      moveBlockRow(block, block.row + shift);
-      occupied.add(cellKey(block.col, block.row));
-    }
-  }
+  // occupied is rebuilt wholesale from itself, purely, rather than
+  // mutated cell-by-cell in step with the block loop above — see
+  // occupiedAfterClear's doc comment for the ordering bug that pattern
+  // had (regression-tested in packages/grid/test/collision.test.js).
+  occupied = occupiedAfterClear(occupied, rows);
 }
 
 function moveHorizontal(dir) {
