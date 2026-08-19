@@ -1,22 +1,24 @@
 import { useState } from "react";
-import { Stage } from "./components/Stage.jsx";
-import { Toolbar } from "./components/Toolbar.jsx";
-import { Inspector } from "./components/Inspector.jsx";
-import { GamesPanel } from "./components/GamesPanel.jsx";
+import { BrowserRouter, Routes, Route } from "react-router";
+import { AppHeader } from "./components/AppHeader.jsx";
 import { WizardPanel } from "./components/WizardPanel.jsx";
+import { Dashboard } from "./routes/Dashboard.jsx";
+import { GameEditorRoute } from "./routes/GameEditor.jsx";
 import { CloudAuthProvider } from "./CloudAuthContext.jsx";
 
 export function App() {
-  const [gamesVisible, setGamesVisible] = useState(false);
   const [wizardVisible, setWizardVisible] = useState(false);
 
   return (
-    <CloudAuthProvider>
-      <Stage />
-      <Toolbar onToggleGames={() => setGamesVisible((v) => !v)} onToggleWizard={() => setWizardVisible((v) => !v)} />
-      <GamesPanel visible={gamesVisible} />
-      <WizardPanel visible={wizardVisible} />
-      <Inspector />
-    </CloudAuthProvider>
+    <BrowserRouter>
+      <CloudAuthProvider>
+        <AppHeader onOpenWizard={() => setWizardVisible((v) => !v)} />
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/:gameId" element={<GameEditorRoute />} />
+        </Routes>
+        <WizardPanel visible={wizardVisible} />
+      </CloudAuthProvider>
+    </BrowserRouter>
   );
 }

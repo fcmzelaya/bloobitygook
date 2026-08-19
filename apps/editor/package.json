@@ -15,7 +15,8 @@
     "@octokit/rest": "^21.0.0",
     "firebase": "^11.0.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-router": "^8.0.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.0",

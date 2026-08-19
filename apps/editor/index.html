@@ -6,11 +6,191 @@
   <style>
     html, body {
       margin: 0;
-      height: 100%;
+      min-height: 100%;
       background: #10131a;
-      overflow: hidden;
       font-family: system-ui, sans-serif;
+      color: #dfe4ee;
     }
+
+    #app-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 44px;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 14px;
+      background: #161a24;
+      border-bottom: 1px solid #2a3244;
+      box-sizing: border-box;
+    }
+    #dashboard-link {
+      color: #7ea8d8;
+      text-decoration: none;
+      font-size: 13px;
+    }
+    #dashboard-link:hover { text-decoration: underline; }
+    #app-header #status {
+      flex: 1;
+      font-size: 12px;
+      color: #8b93a7;
+    }
+    #app-header-actions {
+      display: flex;
+      gap: 8px;
+    }
+    #app-header-actions button {
+      font: inherit;
+      font-size: 13px;
+      padding: 5px 12px;
+      border-radius: 6px;
+      border: 1px solid #3a4152;
+      background: #1e2431;
+      color: #dfe4ee;
+      cursor: pointer;
+    }
+    #app-header-actions button:hover { background: #2a3244; }
+
+    /* Dashboard */
+    #dashboard {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 76px 20px 40px;
+    }
+    #dashboard h1 {
+      font-size: 20px;
+      margin: 0 0 16px;
+    }
+    #dashboard-games-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      font-size: 14px;
+    }
+    #dashboard-games-list li {
+      padding: 8px 0;
+      border-bottom: 1px solid #232a39;
+    }
+    #dashboard-games-list a {
+      color: #dfe4ee;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    #dashboard-games-list a:hover { color: #7ea8d8; }
+    #dashboard-error { color: #e0a0a0; font-size: 13px; }
+    #dashboard-new-listing {
+      margin-top: 24px;
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+    }
+    #dashboard-new-listing label {
+      display: block;
+      font-size: 11px;
+      color: #8b93a7;
+    }
+    #dashboard-new-listing input {
+      display: block;
+      margin-top: 3px;
+      background: #1a1f2b;
+      border: 1px solid #3a4152;
+      border-radius: 4px;
+      color: #dfe4ee;
+      font: inherit;
+      padding: 5px 8px;
+    }
+    #dashboard-open-btn {
+      font: inherit;
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid #3a4152;
+      background: #1e2431;
+      color: #dfe4ee;
+      cursor: pointer;
+    }
+    #dashboard-open-btn:hover { background: #2a3244; }
+
+    /* Per-game editor */
+    #game-editor {
+      padding-top: 44px;
+    }
+    #no-scene-note {
+      max-width: 340px;
+      margin: 20px;
+      font-size: 13px;
+      color: #8b93a7;
+    }
+
+    #game-metadata-form {
+      position: fixed;
+      top: 56px;
+      left: 12px;
+      width: 260px;
+      z-index: 10;
+      background: #1a1f2b;
+      border: 1px solid #3a4152;
+      border-radius: 8px;
+      padding: 12px;
+      color: #dfe4ee;
+      font-size: 13px;
+    }
+    #game-metadata-form label {
+      display: block;
+      margin-top: 8px;
+      font-size: 11px;
+      color: #8b93a7;
+    }
+    #game-metadata-form input[type="text"] {
+      width: 100%;
+      box-sizing: border-box;
+      margin-top: 3px;
+      background: #10131a;
+      border: 1px solid #3a4152;
+      border-radius: 4px;
+      color: #dfe4ee;
+      font: inherit;
+      padding: 4px 6px;
+    }
+    #game-metadata-form input:disabled {
+      opacity: 0.5;
+    }
+    #game-metadata-form .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    #game-metadata-form .checkbox-row label {
+      margin-top: 0;
+    }
+    #game-form-error {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #e0a0a0;
+    }
+    #game-metadata-form .form-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    #game-metadata-form .form-actions button {
+      flex: 1;
+      font: inherit;
+      padding: 6px;
+      border-radius: 6px;
+      border: 1px solid #3a4152;
+      background: #1e2431;
+      color: #dfe4ee;
+      cursor: pointer;
+    }
+    #game-metadata-form .form-actions button:hover { background: #2a3244; }
+    #game-metadata-form .form-actions button:disabled { opacity: 0.4; cursor: default; }
+
+    /* Canvas editing (Stage + Toolbar + Inspector), only rendered when a
+       game has a sceneId */
     #stage {
       display: block;
       width: 100vw;
@@ -19,15 +199,16 @@
     }
     #toolbar {
       position: fixed;
-      top: 12px;
-      left: 12px;
+      top: 56px;
+      left: 292px;
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
       align-items: center;
-      max-width: calc(100vw - 24px);
+      max-width: calc(100vw - 304px);
+      z-index: 10;
     }
-    #toolbar button, #toolbar select, #toolbar input[type="text"] {
+    #toolbar button, #toolbar select {
       font: inherit;
       font-size: 13px;
       padding: 6px 12px;
@@ -37,7 +218,6 @@
       color: #dfe4ee;
       cursor: pointer;
     }
-    #toolbar input[type="text"] { cursor: text; }
     #toolbar button:hover, #toolbar select:hover { background: #2a3244; }
     #toolbar button.active {
       background: #3a4a63;
@@ -56,20 +236,10 @@
     #gravity-magnitude {
       width: 100px;
     }
-    #toolbar input#scene-id {
-      width: 90px;
-    }
-    .hidden {
-      display: none !important;
-    }
-    #status {
-      font-size: 12px;
-      color: #8b93a7;
-    }
 
     #inspector {
       position: fixed;
-      top: 12px;
+      top: 56px;
       right: 12px;
       width: 220px;
       background: #1a1f2b;
@@ -79,6 +249,7 @@
       color: #dfe4ee;
       font-size: 13px;
       display: none;
+      z-index: 10;
     }
     #inspector.visible { display: block; }
     #inspector h3 {
@@ -132,82 +303,12 @@
       pointer-events: none;
     }
 
-    #games-panel {
-      position: fixed;
-      bottom: 12px;
-      left: 12px;
-      width: 260px;
-      background: #1a1f2b;
-      border: 1px solid #3a4152;
-      border-radius: 8px;
-      padding: 12px;
-      color: #dfe4ee;
-      font-size: 13px;
-      display: none;
-    }
-    #games-panel.visible { display: block; }
-    #games-panel h3 {
-      margin: 0 0 10px;
-      font-size: 13px;
-    }
-    #games-panel label {
-      display: block;
-      margin-top: 8px;
-      font-size: 11px;
-      color: #8b93a7;
-    }
-    #games-panel input[type="text"] {
-      width: 100%;
-      box-sizing: border-box;
-      margin-top: 3px;
-      background: #10131a;
-      border: 1px solid #3a4152;
-      border-radius: 4px;
-      color: #dfe4ee;
-      font: inherit;
-      padding: 4px 6px;
-    }
-    #games-panel .checkbox-row {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-top: 8px;
-    }
-    #games-panel .checkbox-row label {
-      margin-top: 0;
-    }
-    #save-game-btn {
-      margin-top: 12px;
-      width: 100%;
-      font: inherit;
-      padding: 6px;
-      border-radius: 6px;
-      border: 1px solid #3a4152;
-      background: #1e2431;
-      color: #dfe4ee;
-      cursor: pointer;
-    }
-    #save-game-btn:hover { background: #2a3244; }
-    #save-game-btn:disabled { opacity: 0.4; cursor: default; }
-    #games-list {
-      margin-top: 12px;
-      font-size: 12px;
-      color: #8b93a7;
-      max-height: 120px;
-      overflow-y: auto;
-    }
-    #games-list div {
-      padding: 3px 0;
-      cursor: pointer;
-    }
-    #games-list div:hover {
-      color: #dfe4ee;
-    }
-
+    /* New Game wizard — a centered overlay, reachable from any route */
     #wizard-panel {
       position: fixed;
-      bottom: 12px;
-      left: 292px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
       width: 280px;
       background: #1a1f2b;
       border: 1px solid #3a4152;
@@ -216,6 +317,8 @@
       color: #dfe4ee;
       font-size: 13px;
       display: none;
+      z-index: 30;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
     }
     #wizard-panel.visible { display: block; }
     #wizard-panel h3 {

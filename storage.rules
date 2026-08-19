@@ -1,32 +1,56 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Can edit scenes and save draft game manifests. Fill in real emails
+    // before deploying — this file ships empty on purpose so nothing is
+    // writable by accident.
+    function isCanEdit() {
+      return isSignedIn() && request.auth.token.email in [
+        // "you@example.com",
+        "fmolinerozelaya@gmail.com",
+        "rosana.d.ybarra@gmail.com"
+      ];
+    }
+
+    // Can publish a game (write to the public games/ manifest path that
+    // apps/hub actually reads). Deliberately a smaller list than
+    // isCanEdit — keep apps/editor/src/permissions.js's CAN_PUBLISH_EMAILS
+    // in sync by hand; there's no shared source of truth between the two.
+    function isCanPublish() {
+      return isSignedIn() && request.auth.token.email in [
+        "fmolinerozelaya@gmail.com"
+      ];
+    }
+
     match /scenes/{sceneId} {
       // Published scenes are public so apps/play (and anyone) can load
-      // them unauthenticated. Only the allowlisted collaborators below
-      // can publish/overwrite one. Fill in real emails before deploying —
-      // this file ships empty on purpose so nothing is writable by
-      // accident.
+      // them unauthenticated. Only canEdit collaborators can write one.
       allow read: if true;
-      allow write: if request.auth != null
-        && request.auth.token.email in [
-          // "you@example.com",
-          "fmolinerozelaya@gmail.com",
-          "rosana.d.ybarra@gmail.com"
-        ];
+      allow write: if isCanEdit();
+    }
+
+    // Draft game manifests — canEdit's working area. apps/hub never reads
+    // this prefix, so nothing here is ever publicly visible regardless of
+    // what a draft's `published` field says.
+    match /drafts/games/{allPaths=**} {
+      allow read: if isCanEdit();
+      allow write: if isCanEdit();
     }
 
     // games/<id>/manifest.json — apps/hub reads this (unauthenticated,
     // hence `list` needing to be public too, not just `get`) to build the
-    // public games list; the same collaborators who can publish scenes
-    // can publish/update a game's manifest.
+    // public games list. Writing here IS "publishing a game" (a new id
+    // appearing, or an existing one's `published` flag changing), so it
+    // requires isCanPublish, not just isCanEdit. Storage rules can't gate
+    // individual fields inside one JSON blob, so this path split (rather
+    // than a field-level check) is what actually enforces the distinction.
     match /games/{allPaths=**} {
       allow read: if true;
-      allow write: if request.auth != null
-        && request.auth.token.email in [
-          "fmolinerozelaya@gmail.com",
-          "rosana.d.ybarra@gmail.com"
-        ];
+      allow write: if isCanPublish();
     }
   }
 }

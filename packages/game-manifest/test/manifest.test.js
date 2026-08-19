@@ -8,16 +8,18 @@ describe("createManifestEntry", () => {
     expect(entry.thumbnail).toBeNull();
     expect(entry.published).toBe(false);
     expect(typeof entry.createdAt).toBe("string");
+    expect(entry.sceneId).toBeNull();
   });
 
   it("preserves explicitly provided optional fields", () => {
     const entry = createManifestEntry({
       id: "tetris", title: "Tetris", route: "/tetris/",
-      description: "Classic falling blocks", published: true, createdAt: "2026-01-01T00:00:00.000Z",
+      description: "Classic falling blocks", published: true, createdAt: "2026-01-01T00:00:00.000Z", sceneId: "default",
     });
     expect(entry.description).toBe("Classic falling blocks");
     expect(entry.published).toBe(true);
     expect(entry.createdAt).toBe("2026-01-01T00:00:00.000Z");
+    expect(entry.sceneId).toBe("default");
   });
 
   it("throws when a required field is missing", () => {

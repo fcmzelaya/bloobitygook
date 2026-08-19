@@ -20,6 +20,10 @@ export function createManifestEntry(fields) {
     thumbnail: fields.thumbnail ?? null,
     published: fields.published ?? false,
     createdAt: fields.createdAt ?? new Date().toISOString(),
+    // Which scene (scenes/<sceneId>.json) this game's canvas editor loads,
+    // or null for games with no editable scene yet (e.g. hand-coded apps
+    // like Tetris/Pac-Man that don't have a data-driven scene at all).
+    sceneId: fields.sceneId ?? null,
   };
 }
 
