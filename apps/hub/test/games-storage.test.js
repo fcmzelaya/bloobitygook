@@ -8,10 +8,24 @@ describe("fetchAllManifests", () => {
 
   beforeEach(() => {
     vi.resetModules();
+    // Explicit, not ambient: isCloudEnabled reads this at import time, and
+    // whether a local apps/hub/.env sets it is environment-dependent
+    // (unset in CI, since .env is gitignored) — stub it so these tests are
+    // deterministic regardless of where they run.
+    vi.stubEnv("VITE_FIREBASE_STORAGE_BUCKET", "test-bucket.appspot.com");
   });
 
   afterEach(() => {
     global.fetch = originalFetch;
+    vi.unstubAllEnvs();
+  });
+
+  it("returns an empty list when the storage bucket isn't configured", async () => {
+    vi.stubEnv("VITE_FIREBASE_STORAGE_BUCKET", "");
+    global.fetch = vi.fn();
+    const { fetchAllManifests } = await import("../src/games-storage.js");
+    expect(await fetchAllManifests()).toEqual([]);
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 
   it("degrades to an empty list on a 404 (function hasn't fired yet)", async () => {
