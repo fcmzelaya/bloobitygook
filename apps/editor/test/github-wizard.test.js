@@ -20,7 +20,8 @@ function makeFakeOctokit() {
     repos: {
       getContent: vi.fn(({ path }) => {
         const content = path === "package.json" ? ROOT_PACKAGE_JSON : COMPOSE_SCRIPT;
-        return Promise.resolve({ data: { content: toBase64(content) } });
+        const sha = path === "package.json" ? "root-pkg-sha" : "compose-script-sha";
+        return Promise.resolve({ data: { content: toBase64(content), sha } });
       }),
       createOrUpdateFileContents: vi.fn().mockResolvedValue({}),
     },
@@ -61,6 +62,24 @@ describe("createGamePR", () => {
     for (const call of octokit.repos.createOrUpdateFileContents.mock.calls) {
       expect(call[0].branch).toBe("wizard/pong");
     }
+  });
+
+  it("passes each patched shared file's fetched sha back, as GitHub's contents API requires for an update (not a create)", async () => {
+    const octokit = makeFakeOctokit();
+    await createGamePR(octokit, { id: "pong", title: "Pong", description: "", port: 5181 });
+
+    const rootPkgCall = octokit.repos.createOrUpdateFileContents.mock.calls.find((call) => call[0].path === "package.json");
+    expect(rootPkgCall[0].sha).toBe("root-pkg-sha");
+    const composeCall = octokit.repos.createOrUpdateFileContents.mock.calls.find(
+      (call) => call[0].path === "scripts/compose-site.mjs"
+    );
+    expect(composeCall[0].sha).toBe("compose-script-sha");
+
+    // The 4 freshly generated apps/<id>/* files are brand new — no sha exists for them yet.
+    const newFileCall = octokit.repos.createOrUpdateFileContents.mock.calls.find(
+      (call) => call[0].path === "apps/pong/package.json"
+    );
+    expect(newFileCall[0].sha).toBeUndefined();
   });
 
   it("patches the shared files' fetched content, not a hardcoded copy", async () => {

@@ -25,12 +25,20 @@ export async function createGamePR(octokit, { id, title, description, port }) {
   });
 
   const files = generateTemplateFiles({ id, title, port });
+  // GitHub's contents API requires the existing file's blob sha when
+  // *updating* a file that's already on the branch (unlike creating a new
+  // one, which needs none) — omitting it 422s with "sha wasn't supplied".
+  // Only the two patched shared files need one; the four freshly
+  // generated apps/<id>/* files are brand new.
+  const shas = {};
 
   const rootPackageJson = await getFileContent(octokit, "package.json", branch);
-  files["package.json"] = addDevScriptToRootPackageJson(rootPackageJson, id);
+  files["package.json"] = addDevScriptToRootPackageJson(rootPackageJson.content, id);
+  shas["package.json"] = rootPackageJson.sha;
 
   const composeScript = await getFileContent(octokit, "scripts/compose-site.mjs", branch);
-  files["scripts/compose-site.mjs"] = addAppToComposeScript(composeScript, id);
+  files["scripts/compose-site.mjs"] = addAppToComposeScript(composeScript.content, id);
+  shas["scripts/compose-site.mjs"] = composeScript.sha;
 
   for (const [path, content] of Object.entries(files)) {
     await octokit.repos.createOrUpdateFileContents({
@@ -40,6 +48,7 @@ export async function createGamePR(octokit, { id, title, description, port }) {
       path,
       message: `wizard: add ${path} for "${id}"`,
       content: toBase64(content),
+      ...(shas[path] ? { sha: shas[path] } : {}),
     });
   }
 
@@ -57,7 +66,7 @@ export async function createGamePR(octokit, { id, title, description, port }) {
 
 async function getFileContent(octokit, path, ref) {
   const { data } = await octokit.repos.getContent({ owner: OWNER, repo: REPO, path, ref });
-  return fromBase64(data.content);
+  return { content: fromBase64(data.content), sha: data.sha };
 }
 
 function toBase64(str) {
