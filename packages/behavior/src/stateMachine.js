@@ -1,4 +1,4 @@
-import { query } from "@bloobitygook/engine";
+import { query } from "@bloobitygook/engine/core";
 
 // entity.behavior = { states: { name: { update?, next? } }, current: "name" }
 // `update(entity, dt, world)` runs every tick the entity is in that state.

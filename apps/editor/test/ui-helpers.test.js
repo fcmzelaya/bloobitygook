@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createWorld, spawn } from "@bloobitygook/engine";
+import { createWorld, spawn } from "@bloobitygook/engine/core";
 import { findBallAt, isGravityMarkerVisible, isPlaceGravityButtonEnabled, statusText } from "../src/ui-helpers.js";
 
 describe("findBallAt", () => {

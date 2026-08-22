@@ -47,9 +47,6 @@ importers:
       '@bloobitygook/game-manifest':
         specifier: workspace:*
         version: link:../../packages/game-manifest
-      firebase:
-        specifier: ^11.0.0
-        version: 11.10.0
     devDependencies:
       vite:
         specifier: ^6.0.0

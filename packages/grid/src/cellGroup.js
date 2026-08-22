@@ -1,4 +1,4 @@
-import { spawn, createSvgElement } from "@bloobitygook/engine";
+import { spawn, createSvgElement } from "@bloobitygook/engine/core";
 
 // A "cell group" is a single entity representing several grid cells that
 // move/rotate together — a falling Tetris piece, e.g. Rendered as one <g>

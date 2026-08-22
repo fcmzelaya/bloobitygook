@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { createWorld, spawn } from "@bloobitygook/engine";
+import { createWorld, spawn } from "@bloobitygook/engine/core";
 import { createBehavior, stepBehavior, behaviorSystem } from "../src/stateMachine.js";
 
 describe("createBehavior", () => {

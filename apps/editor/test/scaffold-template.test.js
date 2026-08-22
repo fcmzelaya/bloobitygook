@@ -30,7 +30,7 @@ describe("generateTemplateFiles", () => {
     expect(files["apps/pong/index.html"]).toContain("bloobitygook — Pong");
   });
 
-  it("main.js imports from the workspace engine package", () => {
-    expect(files["apps/pong/src/main.js"]).toContain('from "@bloobitygook/engine"');
+  it("main.js imports from the workspace engine package's core subpath", () => {
+    expect(files["apps/pong/src/main.js"]).toContain('from "@bloobitygook/engine/core"');
   });
 });

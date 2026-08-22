@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from "vitest";
-import { createWorld, spawn } from "@bloobitygook/engine";
+import { createWorld, spawn } from "@bloobitygook/engine/core";
 import { createAnimation, advanceAnimation, animationSystem } from "../src/animation.js";
 
 describe("createAnimation", () => {

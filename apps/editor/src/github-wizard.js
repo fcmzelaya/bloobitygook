@@ -82,7 +82,6 @@ function buildPrBody({ id, title, description, port }) {
     `**Dev port:** ${port} — adjust \`apps/${id}/vite.config.js\` if that conflicts with something else you're running locally.`,
     "",
     "### Still needs a human",
-    `- [ ] Add \`pnpm --filter @bloobitygook/${id} build\` to \`.github/workflows/ci.yml\` and \`deploy.yml\``,
     "- [ ] Write the actual game",
     `- [ ] Once merged and deployed, publish a manifest entry for it from the editor's "Manage Games" panel so it shows up on the hub`,
   ]

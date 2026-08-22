@@ -16,24 +16,16 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
-      - run: pnpm --filter @bloobitygook/hub build
+      # Every apps/* workspace package builds in one pass, so a
+      # wizard-scaffolded new game deploys with no workflow edit required.
+      - run: pnpm --filter "./apps/*" -r run build
         env:
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
           VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
           VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
           VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
           VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
-      - run: pnpm --filter @bloobitygook/play build
-      - run: pnpm --filter @bloobitygook/tetris build
-      - run: pnpm --filter @bloobitygook/pacman build
       - run: pnpm compose
-      - run: pnpm --filter @bloobitygook/editor build
-        env:
-          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
-          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
-          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
-          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
-          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
       # Requires a `FIREBASE_SERVICE_ACCOUNT` repo secret (Project Settings
       # -> Service Accounts -> Generate new private key). The "play"/"editor"
       # Hosting targets are already mapped in .firebaserc (bloobitygook /

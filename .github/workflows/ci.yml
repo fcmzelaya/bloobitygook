@@ -17,13 +17,28 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
-      - run: pnpm --filter @bloobitygook/hub build
-      - run: pnpm --filter @bloobitygook/play build
-      - run: pnpm --filter @bloobitygook/tetris build
-      - run: pnpm --filter @bloobitygook/pacman build
       # publish.js/games-storage.js degrade gracefully without
       # VITE_FIREBASE_* set (cloud UI stays hidden, nothing throws), so
       # this build is a real check even without repo secrets available —
-      # e.g. on PRs from forks.
-      - run: pnpm --filter @bloobitygook/editor build
+      # e.g. on PRs from forks. Every apps/* workspace package builds in
+      # one pass here, so a wizard-scaffolded new game is picked up with
+      # no workflow edit required.
+      - run: pnpm --filter "./apps/*" -r run build
       - run: pnpm compose
+      # Gives a real hosted URL to test a new/changed game against before
+      # merge — the "heavier environment" a local `pnpm dev:*` can't
+      # provide. Skipped for fork PRs, which don't get repo secrets.
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          target: play
+          projectId: bloobitygook
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          target: editor
+          projectId: bloobitygook

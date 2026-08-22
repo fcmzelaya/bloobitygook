@@ -1,4 +1,4 @@
-import { createWorld, query, destroy, clearChildren, startLoop } from "@bloobitygook/engine";
+import { createWorld, query, destroy, clearChildren, startLoop } from "@bloobitygook/engine/core";
 import {
   canPlace,
   checkCompleteRows,

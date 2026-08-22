@@ -23,6 +23,8 @@ pnpm build         # builds every app, then composes them into dist-site/
 
 Needs a real Vite dev server (not `file://`) — ES module imports and scene/manifest fetches both require an HTTP origin. No Turborepo — small enough that plain `pnpm -r`/`pnpm --filter` scripts are simpler; revisit only if build times become annoying.
 
+`functions/` (the Cloud Function in Deployment below) is outside the pnpm workspace, so `pnpm test`/`pnpm build` don't touch it — run `npm test` from inside `functions/` directly.
+
 ## Package/app shape
 
 ```
@@ -38,8 +40,10 @@ apps/
   play/     the blob-physics demo, light + public — deploys to /blob/
   tetris/   full game, on packages/grid + packages/triggers — /tetris/
   pacman/   full game, on packages/animation + packages/triggers + packages/behavior — /pacman/
-  hub/      public list of published games, reads Storage — / (site root)
+  hub/      public list of published games, fetches a Storage-hosted aggregate, no SDK — / (site root)
   editor/   the dev tool — React UI chrome around an imperative engine bridge
+
+functions/  one Storage-triggered Cloud Function maintaining that hub aggregate — outside the pnpm workspace
 ```
 
 Every game app builds with its own Vite `base` (`/tetris/`, `/pacman/`, `/blob/`) and gets combined into one deployable tree by `scripts/compose-site.mjs` (see Deployment below). `apps/editor` is not part of that composed site — it deploys to its own separate Firebase Hosting site, since it's a dev tool, not something players load.
@@ -50,18 +54,20 @@ Entities are plain objects (`{id, ...fields}`), components are just fields on th
 
 ## packages/engine
 
-The original core, still exactly what `apps/play` and the blob-editing half of `apps/editor` run on. **Not used by Tetris or Pac-Man's gameplay** — they only pull `createWorld`/`spawn`/`destroy`/`query`/`createSvgElement`/`setAttrs`/`clearChildren`/`startLoop` from it, not the physics systems below.
+The original core, still exactly what `apps/play` and the blob-editing half of `apps/editor` run on. **Not used by Tetris or Pac-Man's gameplay** — they only pull `createWorld`/`spawn`/`destroy`/`query`/`createSvgElement`/`setAttrs`/`clearChildren`/`startLoop` from it, not the physics systems below. Since Phase 7 of the games roadmap, that split is an enforced package contract, not just convention: `package.json` has two subpath exports, no bare `"."` — `"./core"` (world/svg/loop) and `"./physics"` (everything blob-specific). Tetris/Pac-Man and every game-logic package (`grid`/`animation`/`behavior`) import only `@bloobitygook/engine/core`; `apps/play` and `apps/editor/src/engine.js` import both subpaths as needed.
 
+- `core.js` — re-exports `world.js`/`svg.js`/`loop.js`, the `"./core"` subpath's entire surface.
 - `world.js` — `createWorld`, `spawn`, `destroy`, `query`, `clear`.
 - `svg.js` — `createSvgElement`, `setAttrs`, `clearChildren`; the only place that touches `document.createElementNS`.
 - `loop.js` — `requestAnimationFrame` loop; dt is clamped so a dropped/backgrounded frame doesn't teleport entities.
+- `physics.js` — the `"./physics"` subpath's barrel: re-exports `systems.js`'s 6 systems plus `scene.js`/`fileio.js`/`objects/ball.js`/`color.js`. Deliberately does not re-export core, keeping the two subpaths' scope disjoint.
+- `systems.js` (formerly `physics.js` before the Phase 7 rename) — continuous bounce physics for the blob demo only: `gravitySystem` (`gravity = {mode: "uniform"|"point", magnitude, x, y}`; point mode pulls toward `(x,y)` at *constant* magnitude, deliberately not inverse-square, so one slider is comparable across modes), `integrateSystem` (semi-implicit Euler), `collisionSystem` (floor/wall bounds, restitution/friction), `ballCollisionSystem` (ball-vs-ball, broad-phased with a uniform grid so it's not O(n²)), `deformationSystem` (a spring driving squash-on-impact), `renderSystem` (the only system touching the DOM).
 - `color.js` — `hslToHex`/`randomBallColor`.
-- `physics.js` — continuous bounce physics for the blob demo only: `gravitySystem` (`gravity = {mode: "uniform"|"point", magnitude, x, y}`; point mode pulls toward `(x,y)` at *constant* magnitude, deliberately not inverse-square, so one slider is comparable across modes), `integrateSystem` (semi-implicit Euler), `collisionSystem` (floor/wall bounds, restitution/friction), `ballCollisionSystem` (ball-vs-ball, broad-phased with a uniform grid so it's not O(n²)), `deformationSystem` (a spring driving squash-on-impact), `renderSystem` (the only system touching the DOM).
 - `scene.js` — `serializeScene`/`loadScene` for the blob demo's scene format. `SPAWNERS` maps a scene object's `type` to its spawn function. Gravity is normalized on load so scenes saved before point-gravity existed still load.
 - `fileio.js` — File System Access API wrapped with a download-link fallback; `hasFileSystemAccess` guards against `window` not existing at all (Node/test/future-server contexts), not just against the API being unsupported.
 - `objects/ball.js` — the blob demo's one entity type.
 
-Package resolution note, relevant to every package here: they all ship raw ESM with no build step (`"exports": {".": "./src/index.js"}`). Every app's `vite.config.js` excludes its workspace deps from `optimizeDeps` — otherwise esbuild's pre-bundler treats a workspace-linked package as an immutable third-party dep and stale-caches it, breaking hot reload on edits.
+Package resolution note, relevant to every package here: they all ship raw ESM with no build step. Every other package still exports a single `"."` (`"exports": {".": "./src/index.js"}`) — `packages/engine` is the one exception, with the two subpaths above instead. Every app's `vite.config.js` excludes its workspace deps from `optimizeDeps` by package name (not by subpath, which Vite doesn't distinguish here) — otherwise esbuild's pre-bundler treats a workspace-linked package as an immutable third-party dep and stale-caches it, breaking hot reload on edits.
 
 ## packages/grid (Tetris)
 
@@ -110,7 +116,7 @@ Piece rotation table in `src/pieces.js` ported from the original Python prototyp
 
 ## apps/hub
 
-`src/games-storage.js` — public, unauthenticated Storage reads (`games/` prefix), gracefully empty ("No games published yet.") when nothing's published or Firebase isn't configured. `selectPublishedGames` is a pure filter/sort, unit tested without touching Firebase at all.
+`src/games-storage.js` — no Firebase SDK dependency at all (dropped in Phase 7): `fetchAllManifests` does one plain `fetch` against Storage's public download URL for `games/index.json`, a single aggregated file the Cloud Function in `functions/index.js` maintains (see Deployment below), gracefully empty ("No games published yet.") on a 404 or when `VITE_FIREBASE_STORAGE_BUCKET` isn't configured. `selectPublishedGames` is a pure filter/sort, unit tested with a mocked `fetch`.
 
 ## apps/editor
 
@@ -134,11 +140,13 @@ None of `publish.js`/`games.js`/`github-wizard.js`/`scaffold/*`/`ui-helpers.js` 
 
 ## Deployment
 
-One Firebase project, two Hosting sites: `play` (target name, despite the name it now serves the *composed* `dist-site/` — hub at `/`, tetris/pacman/blob at their sub-paths) and `editor` (its own separate site). `scripts/compose-site.mjs` copies each game app's `dist/` into `dist-site/<route>/` after they're all built; see its `APPS` array for the route mapping (update it, plus root `package.json`'s `build` script, when adding a new game app manually — the wizard does the same edits automatically for apps it scaffolds).
+One Firebase project, two Hosting sites: `play` (target name, despite the name it now serves the *composed* `dist-site/` — hub at `/`, tetris/pacman/blob at their sub-paths) and `editor` (its own separate site). `scripts/compose-site.mjs` copies each game app's `dist/` into `dist-site/<route>/` after they're all built; see its `APPS` array for the route mapping — a new game app still needs a manual entry here (route prefixes aren't derivable), but since Phase 7, root `package.json`'s `build` script (`pnpm --filter "./apps/*" -r run build && pnpm compose`) discovers every `apps/*` workspace package dynamically and no longer needs a per-app edit; the wizard's PR body checklist was trimmed to match.
 
-Storage (`storage.rules`): `scenes/`, `games/`, and `drafts/games/` are all public read except `drafts/games/` (`canEdit`-only read too, since it's working data `apps/hub` never touches). Writes are two-tier, both still just email allowlists (no custom claims/Cloud Functions — deliberately, for a two-person roster): `canEdit` can write `scenes/` and `drafts/games/`; only the smaller `canPublish` can write `games/`, since that path is what `apps/hub` actually lists — writing there *is* publishing. `apps/editor/src/permissions.js`'s `canPublish` list is a UI-only duplicate of the rules' allowlist, kept in sync by hand. `firebase deploy --only storage` after editing that file — it's not automatic.
+Storage (`storage.rules`): `scenes/`, `games/`, and `drafts/games/` are all public read except `drafts/games/` (`canEdit`-only read too, since it's working data `apps/hub` never touches). Writes are two-tier, both still just email allowlists (no custom claims — deliberately, for a two-person roster): `canEdit` can write `scenes/` and `drafts/games/`; only the smaller `canPublish` can write `games/`, since that path is what publishing a game actually means. `apps/editor/src/permissions.js`'s `canPublish` list is a UI-only duplicate of the rules' allowlist, kept in sync by hand. `firebase deploy --only storage` after editing that file — it's not automatic.
 
-`.github/workflows/ci.yml` (test + build every app on PR/push, no deploy) and `deploy.yml` (same, plus `firebase deploy` with `channelId: live` — required on a plain `push` trigger since only `pull_request` context lets the action infer live-vs-preview automatically).
+**`functions/` (Phase 7)**: one Storage-triggered, 2nd-gen Cloud Function, `rebuildGamesIndex` in `functions/index.js` — on any write to `games/<id>/manifest.json`, re-reads every manifest under `games/` and writes an aggregated `games/index.json` that `apps/hub` fetches directly. Eventarc-backed (no manual Pub/Sub setup); runs under the Admin SDK, so it bypasses `storage.rules` entirely rather than needing its own write exception. Outside the pnpm workspace (`pnpm-workspace.yaml` only globs `apps/*`/`packages/*`) — Firebase manages `functions/`'s own `npm install` independently. Requires the Blaze plan and Eventarc/Cloud Functions APIs enabled before `firebase deploy --only functions` will succeed (one-time manual setup, not automated by CI); `games/index.json` needs one manifest re-save through the editor's "Manage Games" panel after first deploy to bootstrap it. The pure aggregation logic (`functions/buildIndex.js`, `functions/manifestPath.js`) is unit tested; the Admin SDK wiring itself needs the Storage emulator (which needs a local Java install) to test directly, so treat it as unverified beyond code review until confirmed against a real deploy.
+
+`.github/workflows/ci.yml` (test + build every app on PR/push, plus — since Phase 7 — a Firebase Hosting preview-channel deploy of `play`/`editor` on same-repo pull requests, giving a real hosted URL to test a new/changed game before merge) and `deploy.yml` (same build, plus `firebase deploy` with `channelId: live` on push to `main` — required there since only `pull_request` context lets the action infer live-vs-preview automatically).
 
 ## Coordinate systems
 

@@ -12,6 +12,24 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "@bloobitygook/editor", "dev"],
       "port": 5176
+    },
+    {
+      "name": "tetris",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@bloobitygook/tetris", "dev"],
+      "port": 5178
+    },
+    {
+      "name": "hub",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@bloobitygook/hub", "dev"],
+      "port": 5179
+    },
+    {
+      "name": "pacman",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@bloobitygook/pacman", "dev"],
+      "port": 5182
     }
   ]
 }

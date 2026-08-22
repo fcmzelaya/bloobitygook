@@ -1,5 +1,5 @@
+import { createWorld, startLoop } from "@bloobitygook/engine/core";
 import {
-  createWorld,
   loadScene,
   spawnBall,
   randomBallColor,
@@ -9,8 +9,7 @@ import {
   ballCollisionSystem,
   deformationSystem,
   renderSystem,
-  startLoop,
-} from "@bloobitygook/engine";
+} from "@bloobitygook/engine/physics";
 import { scenes } from "./scenes.js";
 
 const stage = document.getElementById("stage");

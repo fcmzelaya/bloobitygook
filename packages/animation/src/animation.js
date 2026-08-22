@@ -1,4 +1,4 @@
-import { query, setAttrs } from "@bloobitygook/engine";
+import { query, setAttrs } from "@bloobitygook/engine/core";
 
 // A "frame" is just a set of attributes to apply to an entity's element —
 // swapping fill/shape/etc. over time, not loading image assets. Keeps

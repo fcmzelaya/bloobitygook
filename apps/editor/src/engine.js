@@ -3,12 +3,8 @@
 // React's re-render model. Exposes a useSyncExternalStore-compatible
 // store (subscribe/getSnapshot) for the UI-relevant slice of that state,
 // plus action functions the React components call on user events.
+import { createWorld, destroy, clear, clearChildren, startLoop } from "@bloobitygook/engine/core";
 import {
-  createWorld,
-  destroy,
-  clear,
-  clearChildren,
-  startLoop,
   gravitySystem,
   integrateSystem,
   collisionSystem,
@@ -22,7 +18,7 @@ import {
   openScene,
   spawnBall,
   randomBallColor,
-} from "@bloobitygook/engine";
+} from "@bloobitygook/engine/physics";
 import { findBallAt, isGravityMarkerVisible, isPlaceGravityButtonEnabled, statusText } from "./ui-helpers.js";
 import { isCloudEnabled, publishScene, fetchPublishedScene } from "./publish.js";
 

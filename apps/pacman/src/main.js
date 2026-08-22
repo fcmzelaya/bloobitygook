@@ -1,4 +1,4 @@
-import { createWorld, spawn, destroy, query, createSvgElement, setAttrs, clearChildren, startLoop } from "@bloobitygook/engine";
+import { createWorld, spawn, destroy, query, createSvgElement, setAttrs, clearChildren, startLoop } from "@bloobitygook/engine/core";
 import { createAnimation, animationSystem } from "@bloobitygook/animation";
 import { createTrigger, runTriggers, createZone, zoneEntryCondition } from "@bloobitygook/triggers";
 import { createBehavior, behaviorSystem } from "@bloobitygook/behavior";

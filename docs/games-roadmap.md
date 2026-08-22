@@ -45,7 +45,7 @@ A generic capability demo, not a specific-IP clone — no fixed level layouts or
 
 ## Publishing, the hub, and per-game routes
 
-**Game manifest in Storage**, mirroring the scene-publish pattern already built in `apps/editor/src/publish.js`: each game gets `games/<gameId>/manifest.json` — `{id, title, description, thumbnail, route, published, createdAt}`. A hub page lists games the same way `listPublishedScenes()` already lists scenes (`listAll()` on a prefix) — no database needed, same "Storage as a simple versioned repository" model already decided for scenes.
+**Game manifest in Storage**, mirroring the scene-publish pattern already built in `apps/editor/src/publish.js`: each game gets `games/<gameId>/manifest.json` — `{id, title, description, thumbnail, route, published, createdAt}`. A hub page lists games by fetching one aggregated `games/index.json` — no database needed, same "Storage as a simple versioned repository" model already decided for scenes. A Storage-triggered Cloud Function (`functions/index.js`'s `rebuildGamesIndex`, added in Phase 7) regenerates that aggregate on every manifest write, so publishing a game still takes effect instantly without the hub needing to `listAll()` + read every manifest itself on each page load.
 
 **One public Hosting site, path-based routes**, not a separate site per game:
 ```
@@ -60,7 +60,7 @@ Each game app builds with a Vite `base` matching its route (`base: '/tetris/'`, 
 - **Publishing a scene/level within an already-deployed game** (what exists today) is a pure client-side Storage write — no rebuild, no deploy, instant.
 - **Publishing a new game** (or a code change to one) means a new route needs to exist and be built — that's a repo change, going through the existing CI (`deploy.yml`): the wizard scaffolds `apps/<newgame>/` and a manifest entry, you commit/push, CI builds and deploys it. The wizard is a generator, not a live-editing tool.
 
-**Preview before publish**: manifest entries carry `published: false` until you're ready — the hub only lists `published: true` games, but the route/build can exist and be reachable (e.g. via a direct link from the editor) for you to check before flipping it live. Simple boolean, no separate staging environment needed yet.
+**Preview before publish**: manifest entries carry `published: false` until you're ready — the hub only lists `published: true` games, but the route/build can exist and be reachable (e.g. via a direct link from the editor) for you to check before flipping it live. Simple boolean, no separate staging environment needed yet. Since Phase 7, there's a second, earlier preview point at the *code* layer too: every pull request gets a real hosted Firebase Hosting preview-channel deploy (via `ci.yml`), so a new/changed game can be played at a real URL before it's even merged — not just before its manifest is flipped to published.
 
 ## Editor architecture: introducing React
 
@@ -79,8 +79,7 @@ Grows incrementally — this is the target shape once the platform pieces and al
 
 ```
 packages/
-  engine/        ✅ pure ECS core: world, svg, loop, scene, color; stays game-agnostic
-  physics/       — not actually split out yet; today's physics.js still lives inside packages/engine, used only by the blob demo. Low priority since nothing's forced the split.
+  engine/        ✅ two enforced subpath exports (Phase 7) — "./core" (world/svg/loop ECS primitives, every game/app's actual dependency) and "./physics" (blob-only systems/scene/fileio/color/ball, used only by apps/play and apps/editor's engine.js). A real package contract now, not just tree-shaking. Physically splitting into two packages remains deferred until a second physics-consuming game exists.
   grid/          ✅ for Tetris — kinematic movement, blocking collision, composite/group entities
   triggers/      ✅ generic condition→action; validated against Tetris's line-clear, portals will be its second use
   animation/     ✅ frame-based sprite animation (SVG attribute swaps)
@@ -94,6 +93,8 @@ apps/
   tetris            ✅ playable
   pacman            ✅ playable
   platformer        (new)
+
+functions/         ✅ (Phase 7) one Storage-triggered Cloud Function (rebuildGamesIndex), outside the pnpm workspace — Firebase manages its own npm install here
 ```
 
 ## Build order
@@ -115,8 +116,14 @@ apps/
    - **Scope trims, stated plainly**: "chomp" animation is a radius pulse (frame-attribute swap), not literal mouth-shape path-arc math — proves the animation mechanism without extra geometry work that's polish, not capability. "Scatter" (a third classic ghost state) isn't wired to anything — chase and flee are enough to prove the state-machine + targeting-preference pattern; scatter would just be chase-with-a-different-target, no new mechanism needed if it's ever added.
    - 131 tests passing workspace-wide (up from 104), including a real algorithmic bug caught before it ever reached the browser.
 6. **Phase 5 — Platformer foundations**: `packages/platformer`, extend `packages/behavior` for enemies/hazards.
-6. **Phase 5 — Platformer foundations**: `packages/platformer`, extend `packages/behavior` for enemies/hazards.
 7. **Phase 6 — Build the platformer** on everything prior, third wizard template.
+8. **Phase 7 — Platform hardening** ✅ No new game, no new engine capability — pays down three structural-debt edges that made the *next* game/PR more expensive than it should be, per the roadmap's own "prefer making the next game easier to create" framing. Three independent pieces:
+   - **`packages/engine` split into `/core` and `/physics` subpath exports** (`"./core"` = world/svg/loop ECS primitives; `"./physics"` = the blob-only systems, scene/fileio/color/ball). The "Tetris/Pac-Man never touch physics.js" boundary — previously enforced only by tree-shaking plus each app's `vite.config.js` `optimizeDeps.exclude` list — is now an actual package contract: the bare `"."` export is gone, every importer picks a subpath explicitly. Verified via the full workspace test suite (146 tests, zero changes needed to `packages/engine/test/*` despite the underlying file rename) plus a live dev-server + composed-production-build pass across all four gameplay routes.
+   - **CI/CD discovers apps dynamically**: `.github/workflows/ci.yml`/`deploy.yml` and root `package.json`'s own `build` script replaced their hardcoded per-app `pnpm --filter @bloobitygook/<app> build` lines with `pnpm --filter "./apps/*" -r run build`. A wizard-scaffolded game's PR no longer needs a hand-edited workflow file — `github-wizard.js`'s PR body dropped that checklist item, and `scaffold/repo-edits.js` no longer patches the root build script (only `dev:<id>` and `compose-site.mjs`'s `APPS` entry, which still needs its route registered by hand since CI dynamism doesn't know route prefixes).
+   - **PR preview-channel deploys**: `ci.yml` now also deploys a Firebase Hosting preview channel (`play` and `editor` targets) on every pull request that isn't from a fork, using the same `FirebaseExtended/action-hosting-deploy@v0` action already used for production — a real hosted URL to test a new/changed game against before merge, with zero new GCP services. `channelId: live` pushes to `main` are unchanged.
+   - **Hub reads one aggregated `games/index.json`** instead of `listAll()` + N `getBytes()` calls: a single Storage-triggered, 2nd-gen Cloud Function (`functions/index.js`'s `rebuildGamesIndex`, Eventarc-backed, no manual Pub/Sub) regenerates it whenever any `games/<id>/manifest.json` is written — running under the Admin SDK, so it needs no `storage.rules` changes at all. `apps/hub`'s `games-storage.js` now does one plain `fetch` against Storage's public download URL and dropped the `firebase` package dependency entirely — its production bundle went from 71.55 kB to 1.84 kB. A missing `games/index.json` (function not yet deployed, or nothing ever published) degrades to the same "No games published yet." UI as before, verified live. The pure aggregation logic (`functions/buildIndex.js`, `functions/manifestPath.js`) has full unit coverage; the actual Storage-emulator integration test was blocked on this machine by a missing local Java install (the emulator's dependency, not the function's), so the Admin SDK wiring itself is unverified beyond code review until first real deploy — flagged here rather than glossed over.
+   - Explicitly **not** built: Firestore, Cloud Run, Pub/Sub, or any multiplayer scaffolding — considered and deliberately skipped as solving problems GitHub Actions and flat Storage files already handle at this project's scale. See "Multiplayer" below, untouched by this phase.
+   - **One-time manual prerequisite, not automated by CI**: the project must be on the Blaze plan with Eventarc/Cloud Functions APIs enabled before `firebase deploy --only functions` will succeed, and `games/index.json` needs one manifest re-save (via the editor's "Manage Games" panel) after first deploy to bootstrap it.
 
 Each phase closes with the same checkpoint discipline used for the physics engine: Vitest unit tests for new package logic, then a manual browser parity pass for the app (mirroring how `packages/engine`/`apps/editor` were verified).
 

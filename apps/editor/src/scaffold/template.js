@@ -71,7 +71,7 @@ export default defineConfig(({ command }) => ({
 </html>
 `,
 
-    [`${base}/src/main.js`]: `import { createWorld, startLoop } from "@bloobitygook/engine";
+    [`${base}/src/main.js`]: `import { createWorld, startLoop } from "@bloobitygook/engine/core";
 
 const world = createWorld();
 

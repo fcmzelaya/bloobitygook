@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
-import { createWorld } from "@bloobitygook/engine";
+import { createWorld } from "@bloobitygook/engine/core";
 import { spawnCellGroup, renderCellGroup, absoluteCells } from "../src/cellGroup.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";

@@ -1,4 +1,4 @@
-import { query } from "@bloobitygook/engine";
+import { query } from "@bloobitygook/engine/core";
 
 // Hit-tested by distance-to-center; later-spawned (visually on top) balls
 // win on overlap since query() returns entities in spawn order.

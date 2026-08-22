@@ -41,13 +41,17 @@ service firebase.storage {
       allow write: if isCanEdit();
     }
 
-    // games/<id>/manifest.json — apps/hub reads this (unauthenticated,
-    // hence `list` needing to be public too, not just `get`) to build the
-    // public games list. Writing here IS "publishing a game" (a new id
-    // appearing, or an existing one's `published` flag changing), so it
-    // requires isCanPublish, not just isCanEdit. Storage rules can't gate
-    // individual fields inside one JSON blob, so this path split (rather
-    // than a field-level check) is what actually enforces the distinction.
+    // games/<id>/manifest.json — writing here IS "publishing a game" (a
+    // new id appearing, or an existing one's `published` flag changing),
+    // so it requires isCanPublish, not just isCanEdit. Storage rules can't
+    // gate individual fields inside one JSON blob, so this path split
+    // (rather than a field-level check) is what actually enforces the
+    // distinction. apps/hub itself doesn't read this path directly — it
+    // reads games/index.json, one aggregated file under this same prefix
+    // that functions/index.js's Storage-triggered Cloud Function
+    // regenerates on every manifest write. That function runs under the
+    // Admin SDK, which bypasses these rules entirely, so its write needs
+    // no separate exception here.
     match /games/{allPaths=**} {
       allow read: if true;
       allow write: if isCanPublish();

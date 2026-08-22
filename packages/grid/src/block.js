@@ -1,4 +1,4 @@
-import { spawn, createSvgElement } from "@bloobitygook/engine";
+import { spawn, createSvgElement } from "@bloobitygook/engine/core";
 
 // A settled, static grid cell — what a falling cellGroup decomposes into
 // on landing. Individually queryable/removable, which is what line-

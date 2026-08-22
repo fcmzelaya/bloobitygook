@@ -9,8 +9,7 @@ const ROOT_PACKAGE_JSON = JSON.stringify(
     packageManager: "pnpm@11.22.0",
     scripts: {
       "dev:play": "pnpm --filter @bloobitygook/play dev",
-      build:
-        "pnpm --filter @bloobitygook/hub build && pnpm --filter @bloobitygook/play build && pnpm --filter @bloobitygook/tetris build && pnpm --filter @bloobitygook/editor build && pnpm compose",
+      build: 'pnpm --filter "./apps/*" -r run build && pnpm compose',
       compose: "node scripts/compose-site.mjs",
       test: "pnpm -r test",
     },
@@ -38,22 +37,15 @@ describe("addDevScriptToRootPackageJson", () => {
     expect(result.scripts["dev:pong"]).toBe("pnpm --filter @bloobitygook/pong dev");
   });
 
-  it("inserts the new app's build before pnpm compose, preserving the rest", () => {
+  it("leaves the build script untouched — apps/* is discovered dynamically", () => {
     const result = JSON.parse(addDevScriptToRootPackageJson(ROOT_PACKAGE_JSON, "pong"));
-    expect(result.scripts.build).toBe(
-      "pnpm --filter @bloobitygook/hub build && pnpm --filter @bloobitygook/play build && pnpm --filter @bloobitygook/tetris build && pnpm --filter @bloobitygook/editor build && pnpm --filter @bloobitygook/pong build && pnpm compose"
-    );
+    expect(result.scripts.build).toBe('pnpm --filter "./apps/*" -r run build && pnpm compose');
   });
 
   it("leaves unrelated scripts untouched", () => {
     const result = JSON.parse(addDevScriptToRootPackageJson(ROOT_PACKAGE_JSON, "pong"));
     expect(result.scripts["dev:play"]).toBe("pnpm --filter @bloobitygook/play dev");
     expect(result.scripts.test).toBe("pnpm -r test");
-  });
-
-  it("throws if the build script doesn't end with pnpm compose (drifted format)", () => {
-    const drifted = JSON.stringify({ scripts: { build: "something else entirely" } });
-    expect(() => addDevScriptToRootPackageJson(drifted, "pong")).toThrow(/pnpm compose/);
   });
 });
 

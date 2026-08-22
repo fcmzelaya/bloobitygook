@@ -10,8 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@bloobitygook/game-manifest": "workspace:*",
-    "firebase": "^11.0.0"
+    "@bloobitygook/game-manifest": "workspace:*"
   },
   "devDependencies": {
     "vite": "^6.0.0",

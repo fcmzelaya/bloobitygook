@@ -7,7 +7,7 @@ function toBase64(str) {
 }
 
 const ROOT_PACKAGE_JSON = JSON.stringify({
-  scripts: { build: "pnpm --filter @bloobitygook/hub build && pnpm compose" },
+  scripts: { build: 'pnpm --filter "./apps/*" -r run build && pnpm compose' },
 });
 const COMPOSE_SCRIPT = `const APPS = [\n  ["hub", ""],\n];\n`;
 
