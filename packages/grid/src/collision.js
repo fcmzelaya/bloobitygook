@@ -63,3 +63,10 @@ export function occupiedAfterClear(occupied, clearedRows) {
   }
   return next;
 }
+
+// A collision strategy is (occupied, cells, bounds) => boolean, matching
+// canPlace's own signature exactly. Registered by name so a stage config
+// can select one without importing the implementation directly — room to
+// add a second strategy (e.g. a dense-array-backed occupancy check) later
+// without changing any caller's contract.
+export const collisionStrategies = { boundsAndOccupancy: canPlace };

@@ -30,15 +30,17 @@ Needs a real Vite dev server (not `file://`) — ES module imports and scene/man
 ```
 packages/
   engine/         pure ECS core + the original ball-physics demo's systems
-  grid/           tile-based collision + composite pieces — built for, and only used by, Tetris
+  grid/           tile-based collision + composite pieces + generic spawner/gravity — built for, and only used by, Tetris-shaped games
   triggers/       generic condition -> action, zero dependencies
   animation/      frame-based sprite animation (SVG attribute swaps, not image assets)
   behavior/       generic state machine + seek/flee movement primitives
+  stage/          tiny, dependency-free orchestration (runStage/dispatch) composing whichever systems a game's stage actually needs
+  tetris-pieces/  the one genuinely Tetris-specific package — pure piece shape/color/rotation data, no game-rule logic
   game-manifest/  shape/helpers for a published game's games/<id>/manifest.json
 
 apps/
   play/     the blob-physics demo, light + public — deploys to /blob/
-  tetris/   full game, on packages/grid + packages/triggers — /tetris/
+  tetris/   a Tetris "stage assembly" wiring packages/grid + triggers + stage + tetris-pieces into one configured instance — /tetris/
   pacman/   full game, on packages/animation + packages/triggers + packages/behavior — /pacman/
   hub/      public list of published games, fetches a Storage-hosted aggregate, no SDK — / (site root)
   editor/   the dev tool — React UI chrome around an imperative engine bridge
@@ -69,17 +71,24 @@ The original core, still exactly what `apps/play` and the blob-editing half of `
 
 Package resolution note, relevant to every package here: they all ship raw ESM with no build step. Every other package still exports a single `"."` (`"exports": {".": "./src/index.js"}`) — `packages/engine` is the one exception, with the two subpaths above instead. Every app's `vite.config.js` excludes its workspace deps from `optimizeDeps` by package name (not by subpath, which Vite doesn't distinguish here) — otherwise esbuild's pre-bundler treats a workspace-linked package as an immutable third-party dep and stale-caches it, breaking hot reload on edits.
 
-## packages/grid (Tetris)
+## packages/grid (Tetris-shaped games)
 
-`collision.js` — `canPlace(occupied, cells, bounds)` and `checkCompleteRows(occupied, bounds)`, pure functions over a `Set` of `"col,row"` keys, no ECS dependency. `cellGroup.js` — the falling composite piece: **one** entity holding a list of relative cell offsets, rendered as one `<g>` with N `<rect>` children that get reused (not recreated) across rotations. `block.js` — the individual static cells a piece decomposes into on landing, which is what line-clearing actually needs to query/remove one at a time.
+`collision.js` — `canPlace(occupied, cells, bounds)`, `checkCompleteRows(occupied, bounds)`, `rowAfterClear`/`occupiedAfterClear` (post-clear row-shift math, rebuilt as a fresh `Set` each time rather than mutated cell-by-cell — see its doc comment for the real ordering bug that pattern caused), all pure functions over a `Set` of `"col,row"` keys, no ECS dependency. Also exports `collisionStrategies` — a `{ boundsAndOccupancy: canPlace }` registry so a caller can select a collision strategy by name, with room to add a second implementation later without changing any caller's contract. `cellGroup.js` — the falling composite piece: **one** entity holding a list of relative cell offsets, rendered as one `<g>` with N `<rect>` children that get reused (not recreated) across rotations. `block.js` — the individual static cells a piece decomposes into on landing, which is what line-clearing actually needs to query/remove one at a time.
 
-Deliberately no true parent-child ECS relationship, no generic "action system," no formal game-config package — Tetris's board is procedural (nothing authored to save) and its moves are just validated-mutation functions in `apps/tetris` itself. Revisit if a second game ever needs authored level content.
+Three more generic capabilities, added when Tetris was rewritten to pull reusable tools out of what used to be Tetris-owned logic, rather than a Tetris-specific package:
+- `transform.js` — `attemptTransform(piece, patch, occupied, bounds, strategy = canPlace)`, the one shared "try a candidate change, roll back on collision" helper. Used identically for horizontal moves, rotation, and drop ticks, so none of them hand-duplicate "build a candidate, test collision, mutate-or-reject."
+- `spawner.js` — `createSpawner({candidates, strategy})`, generic candidate selection with lookahead (`next()`/`peek()`) — nothing here knows "piece" is a Tetris concept; a future game could spawn enemies/items through the same function. Each strategy is a factory returning a stateful `pick()` closure, so a future stateful strategy (e.g. a shuffled-bag algorithm) is a new registry entry, not a redesign.
+- `gridGravity.js` — `applyGridGravity(entity, direction, occupied, bounds, strategy)`, the discrete, direction-configurable counterpart to `packages/engine`'s continuous physics `gravitySystem` (not a unification of the two — continuous-velocity integration and discrete per-tick stepping are different computations). `direction` is a `{dcol, drow}` vector; `{dcol:0, drow:1}` is "down" for Tetris, but nothing here assumes that.
+
+Deliberately no true parent-child ECS relationship, no formal game-config package inside grid itself — that composition role belongs to `packages/stage` instead (below). Tetris's board is procedural (nothing authored to save); its moves are just validated-mutation calls, now made via the generic `attemptTransform`/`applyGridGravity` rather than app-owned duplicated logic.
 
 ## packages/triggers
 
 `createTrigger({condition, action})` + `runTriggers(world, triggers)` — condition returns whatever matched, action runs once per tick something did, `runTriggers` returns which triggers fired and their matches (so a caller like Tetris's scoring doesn't need to re-derive what happened). Zero dependencies. `zone.js` adds a spatial-entry helper (`createZone`/`isInsideZone`/`zoneEntryCondition`) for portal-style triggers.
 
 This is the one package whose generalization got real validation, not just a plausible-sounding unit test: Tetris's line-clearing was retrofitted from an inline `checkCompleteRows`+`clearRows` call to a `lineClearTrigger`, confirmed byte-identical before/after. Pac-Man's tunnel portals are the second use case, and a genuinely different shape (spatial zone entry vs. a board-state condition) — good evidence the abstraction actually covers more than one thing.
+
+`tieredGoal.js` — `createTieredGoalTrigger({condition, tierNames, onAchieve})`, built on top of `createTrigger` (unchanged). Generalizes "count how many things completed at once, name the tier" — Tetris's single/double/triple/tetris line-clear naming is the validating second use case for this specific pattern, the same way portals validated the base condition→action shape.
 
 ## packages/animation
 
@@ -91,6 +100,14 @@ This is the one package whose generalization got real validation, not just a pla
 
 **Only the state-machine half has a real consumer.** Pac-Man's ghosts use `createBehavior`/`behaviorSystem` for their chase/flee states, but ghost *movement* goes through `apps/pacman`'s own tile-locked `movement.js` + `ghostAI.js` (intersection direction-choice by closest/farthest targeting), not `seekToward`/`fleeFrom` — those remain unit-tested only, not yet proven against a real app. Worth remembering before assuming they're validated the way the state machine is.
 
+## packages/stage
+
+`runStage(stage, world, dt)` + `createActionDispatcher(stage)` — genuinely generic, zero dependencies (not even on `engine`/`grid`/`triggers`), because it only composes whatever functions a `stage` config hands it rather than assuming any particular game shape. `runStage` calls each `{fn, config}` in `stage.systems` as `fn(world, dt, config)` every tick (matching `packages/engine`'s own established system-function convention) — a stage only lists the systems it actually needs. `createActionDispatcher` is the event-driven counterpart: `dispatch(action, ...args)` looks up `stage.controls[action]` and calls it, for input-triggered moves (move/rotate/hard-drop) as opposed to `runStage`'s continuous per-tick systems (gravity). Built when Tetris was rewritten, but nothing here is Tetris-specific — a stage is just whichever systems/controls its assembly code chooses to wire in.
+
+## packages/tetris-pieces
+
+The one genuinely Tetris-specific package, and it's pure data: `PIECES` (the 4-precomputed-rotation-states-per-piece table, ported from the Python prototype — see `apps/tetris` below), `PIECE_COLORS`, `PIECE_TYPES`, `cellsForRotation`, `spawnPiece`. No collision, no spawning logic, no game rules — just what a tetromino *is*. Everything that used to be piece-selection logic (`randomPieceType`) moved into `packages/grid`'s generic `spawner.js` instead, since choosing among candidates isn't a Tetris-specific concept.
+
 ## packages/game-manifest
 
 `createManifestEntry`/`isValidManifestEntry` — the shape of a `games/<id>/manifest.json` entry (`id`, `title`, `description`, `route`, `thumbnail`, `published`, `createdAt`, `sceneId`), pure, no Firebase dependency. Used by `apps/hub` (reading) and `apps/editor`'s `games.js` (writing) so neither pulls in the other's I/O concerns. `sceneId` (string or `null`) is which `scenes/<id>.json` a game's canvas editor loads — `null` for games with no editable scene yet (every hand-coded game, e.g. Tetris/Pac-Man; only the blob demo has one).
@@ -101,7 +118,11 @@ This is the one package whose generalization got real validation, not just a pla
 
 ## apps/tetris
 
-Piece rotation table in `src/pieces.js` ported from the original Python prototype (`valkirie/tetris/pieces.py`) — same 4-precomputed-rotation-states-per-piece idea, translated from pixel `Vector` offsets to grid `{col,row}` offsets; verified structurally (every rotation state is 4 non-overlapping cells, the O-piece is rotation-invariant). 10×20 board at 24px cells. Gravity-tick drop, hard lock on landing (decomposes the falling piece into individual `packages/grid` blocks), line-clear via the `lineClearTrigger` described above, score, game over + restart.
+`src/main.js` is a Tetris **stage assembly**, not owned game-rule logic — every rule it applies (collision, spawning, gravity, tiered goal detection, transform-attempt-and-reject) is a generic capability imported from `packages/grid`/`triggers`/`stage`; this file only supplies board size (10×20 @ 24px), the spawn origin, drop direction (`{dcol:0, drow:1}`), piece set, and scoring — configuration and wiring, not logic. The piece rotation table itself lives in `packages/tetris-pieces` (ported from the original Python prototype `valkirie/tetris/pieces.py` — same 4-precomputed-rotation-states-per-piece idea, translated from pixel `Vector` offsets to grid `{col,row}` offsets; verified structurally there, not here).
+
+Features: hard drop (`space` — loops `applyGridGravity` until blocked, no new primitive needed), a next-piece preview (powered by the spawner's `peek()`), and a level system (drop speed increases and score multiplies as `totalLinesCleared` crosses `linesPerLevel` thresholds — this state is app-level, not a generic capability, since it's specific to how *this* game paces and scores itself). Line-clear scoring is tiered (single/double/triple/tetris) via `packages/triggers`' `createTieredGoalTrigger`.
+
+**Known, accepted tradeoff**: `apps/editor/src/scaffold/tetris-template.js`'s wizard-generated Tetris instances mirror this file's assembly shape as a hand-maintained generated-code template, not a shared runtime function call — consistent with how the wizard already bakes config (port/id) as literal generated code everywhere else, not a new problem introduced here. Keep the two in sync by hand when either changes.
 
 ## apps/pacman
 
@@ -134,7 +155,7 @@ The dev tool. Routed via `react-router`: `/` is a dashboard listing every game, 
 - `src/firebase-client.js` — the *only* place that calls `initializeApp` (calling it twice throws); `publish.js` and `games.js` both import `auth`/`storage`/`isCloudEnabled` from here rather than each creating their own.
 - `src/publish.js` — scene publish/fetch to `scenes/<id>.json` in Storage, gated by sign-in (the `canEdit` tier), separate from local Save/Open (File System Access), which keeps working unauthenticated. No live listener — publishing is explicit and occasional, not sync.
 - `src/games.js` — `publishGame`/`fetchGame`/`listGames` target the public `games/<id>/manifest.json` (the `canPublish` tier, per `storage.rules`); `saveDraft`/`fetchDraft` target `drafts/games/<id>/manifest.json` (the `canEdit` tier — editing a draft never makes it visible on `apps/hub`, only publishing does); `listGamesForEditor(user)` merges both for the dashboard, skipping the drafts read entirely when signed out rather than attempting a call `storage.rules` would reject.
-- `src/scaffold/{template,repo-edits}.js` + `src/github-wizard.js` — the "New Game" wizard, unrelated to the manifest system above: it scaffolds real app code and opens a GitHub PR (Octokit), it doesn't touch Storage at all. A browser page can't write repo files or push commits directly, so this is the workaround: `template.js` generates a minimal engine-connected app shell (pure), `repo-edits.js` patches the *fetched* current content of root `package.json` and `scripts/compose-site.mjs` to register the new app (pure, throws loudly if its anchors don't match rather than corrupting them), `github-wizard.js` orchestrates branch → write files → PR via an injected Octokit-shaped client (so the whole flow is unit tested without ever touching the real repo). Auth is a user-supplied fine-grained GitHub PAT stored only in `localStorage`. **Not automated**: wiring the new app into `.github/workflows/ci.yml`/`deploy.yml` — left as a checklist item in the generated PR body rather than fragile YAML string-patching. Multi-scene-per-game configuration and in-editor menu building are explicitly not built yet — deferred, not designed around.
+- `src/scaffold/{template,tetris-template,repo-edits}.js` + `src/github-wizard.js` — the "New Game" wizard, unrelated to the manifest system above: it scaffolds real app code and opens a GitHub PR (Octokit), it doesn't touch Storage at all. A browser page can't write repo files or push commits directly, so this is the workaround: `template.js` generates the minimal engine-connected app shell (pure); `tetris-template.js` generates a complete, configured Tetris instance instead (board size/cell size/piece subset/drop speed/lines-per-level, all defaulting to `apps/tetris`'s own constants — see `## apps/tetris` above), mirroring `apps/tetris/src/main.js`'s stage-assembly shape as generated code; `WizardPanel.jsx`'s "Game type" selector (`blank`|`tetris`) picks which one `createGamePR` calls. `repo-edits.js` patches the *fetched* current content of root `package.json` (just the new `dev:<id>` script — the `build` script discovers `apps/*` dynamically and needs no per-app edit) and `scripts/compose-site.mjs` to register the new app's route (pure, throws loudly if its anchors don't match rather than corrupting them). `github-wizard.js` orchestrates branch → write files (passing each patched file's fetched `sha`, which GitHub's contents API requires for updating an existing file, not just creating one) → PR via an injected Octokit-shaped client (so the whole flow is unit tested without ever touching the real repo). Auth is a user-supplied fine-grained GitHub PAT stored only in `localStorage`. The generated PR body's one remaining manual checklist item is running `pnpm install` and committing the updated `pnpm-lock.yaml` — the wizard can't run pnpm from a browser, so a new app's dependencies never make it into the lockfile on its own; CI wiring itself is fully automatic (see Deployment below). Multi-scene-per-game configuration and in-editor menu building are explicitly not built yet — deferred, not designed around.
 
 None of `publish.js`/`games.js`/`github-wizard.js`/`scaffold/*`/`ui-helpers.js` needed structural changes for the dashboard restructure — they never touched the DOM or routing, so their tests kept passing verbatim (`games.js` only grew new exports, didn't change existing ones). Good confirmation that pulling pure logic out of DOM-wiring early (a pattern started with `ui-helpers.js` back when the editor was still vanilla JS) keeps paying off as the app grows.
 

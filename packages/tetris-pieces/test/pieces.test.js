@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { PIECES, PIECE_TYPES, cellsForRotation, randomPieceType } from "../src/pieces.js";
+import { PIECES, PIECE_TYPES, cellsForRotation } from "../src/pieces.js";
 
 describe("PIECES rotation table", () => {
   it("every piece has exactly 4 rotation states", () => {
@@ -38,13 +38,5 @@ describe("PIECES rotation table", () => {
     const rot1 = cellsForRotation("i", 1);
     expect(new Set(rot0.map((c) => c.col)).size).toBe(1); // vertical: same column
     expect(new Set(rot1.map((c) => c.row)).size).toBe(1); // horizontal: same row
-  });
-});
-
-describe("randomPieceType", () => {
-  it("always returns a valid piece type", () => {
-    for (let i = 0; i < 20; i++) {
-      expect(PIECE_TYPES).toContain(randomPieceType());
-    }
   });
 });

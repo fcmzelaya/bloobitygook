@@ -46,6 +46,24 @@
       color: #e0a0a0;
       font-weight: 600;
     }
+    #level {
+      color: #8b93a7;
+      margin-bottom: 12px;
+    }
+    #next-label {
+      color: #6b7284;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+    #next-piece-stage {
+      display: block;
+      border: 1px solid #3a4152;
+      border-radius: 4px;
+      background: #1a1f2b;
+      margin-bottom: 16px;
+    }
     #controls {
       margin-top: 16px;
       color: #6b7284;
@@ -63,11 +81,17 @@
     <div id="panel">
       <h1>Tetris</h1>
       <div id="score">0</div>
+      <div id="level">Level 1</div>
+      <div id="next-label">Next</div>
+      <svg id="next-piece-stage" viewBox="0 0 100 100" width="100" height="100">
+        <g id="next-piece"></g>
+      </svg>
       <div id="status">Arrow keys to play</div>
       <div id="controls">
         &larr;/&rarr; move<br />
         &darr; soft drop<br />
-        &uarr; rotate
+        &uarr; rotate<br />
+        space hard drop
       </div>
     </div>
   </div>

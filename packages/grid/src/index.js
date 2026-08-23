@@ -1,3 +1,6 @@
-export { cellKey, canPlace, checkCompleteRows, rowAfterClear, occupiedAfterClear } from "./collision.js";
+export { cellKey, canPlace, checkCompleteRows, rowAfterClear, occupiedAfterClear, collisionStrategies } from "./collision.js";
 export { spawnCellGroup, renderCellGroup, absoluteCells } from "./cellGroup.js";
 export { spawnBlock, moveBlockRow } from "./block.js";
+export { attemptTransform } from "./transform.js";
+export { createSpawner } from "./spawner.js";
+export { applyGridGravity } from "./gridGravity.js";

@@ -7,19 +7,21 @@ A small SVG + vanilla JS game engine and the games built on it. The actual produ
 ```
 packages/
   engine/         shared ECS core + the original ball-physics demo's systems
-  grid/           tile-based collision, composite pieces (built for Tetris)
-  triggers/       generic condition -> action (Tetris line-clear, Pac-Man portals)
+  grid/           tile-based collision, composite pieces, a generic spawner + configurable grid-gravity (Tetris-shaped games)
+  triggers/       generic condition -> action (Tetris line-clear, Pac-Man portals, tiered goal detection)
   animation/      frame-based sprite animation (SVG attribute swaps)
   behavior/       generic state machine + seek/flee movement (ghost AI)
+  stage/          tiny orchestration composing whichever systems/controls a game's stage needs
+  tetris-pieces/  pure Tetris piece shape/color/rotation data — the only Tetris-specific package
   game-manifest/  shape/helpers for a published game's games/<id>/manifest.json
 
 apps/
   play/     light public build of the original blob-physics demo — /blob/
-  tetris/   full game — /tetris/
+  tetris/   full game, a "stage assembly" over the generic packages above — /tetris/
   pacman/   full game — /pacman/
-  hub/      public list of published games, reads Storage — /
+  hub/      public list of published games, fetches a Storage-hosted aggregate — /
   editor/   the dev tool: scene editor, cloud publish, "Manage Games" panel,
-            and the "New Game" wizard (scaffolds an app, opens a GitHub PR)
+            and the "New Game" wizard (scaffolds a blank app or a full Tetris instance, opens a GitHub PR)
 ```
 
 Each game app builds with its own Vite `base` path and gets composed into one deployable `dist-site/` by `scripts/compose-site.mjs` — see the routes above.

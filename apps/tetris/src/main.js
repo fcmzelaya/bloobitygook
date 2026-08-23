@@ -1,36 +1,82 @@
-import { createWorld, query, destroy, clearChildren, startLoop } from "@bloobitygook/engine/core";
+import { createWorld, query, destroy, clearChildren, createSvgElement, startLoop } from "@bloobitygook/engine/core";
 import {
   canPlace,
+  attemptTransform,
   checkCompleteRows,
   cellKey,
   absoluteCells,
-  renderCellGroup,
   spawnBlock,
   moveBlockRow,
   rowAfterClear,
   occupiedAfterClear,
+  createSpawner,
+  applyGridGravity,
 } from "@bloobitygook/grid";
-import { createTrigger, runTriggers } from "@bloobitygook/triggers";
-import { spawnPiece, cellsForRotation, randomPieceType } from "./pieces.js";
+import { createTieredGoalTrigger, runTriggers } from "@bloobitygook/triggers";
+import { runStage, createActionDispatcher } from "@bloobitygook/stage";
+import { PIECE_COLORS, PIECE_TYPES, cellsForRotation, spawnPiece } from "@bloobitygook/tetris-pieces";
 
-const COLS = 10;
-const ROWS = 20;
+// This is "the Tetris stage assembly" — every rule it applies (collision,
+// spawning, gravity, tiered goal detection, transform-attempt-and-reject)
+// is a generic capability from @bloobitygook/grid/triggers/stage. Nothing
+// below is owned game-rule logic; it's board size, piece set, drop
+// direction, and scoring, wired together into one running instance.
+const BOUNDS = { cols: 10, rows: 20 };
 const CELL_SIZE = 24;
-const BOUNDS = { cols: COLS, rows: ROWS };
 const SPAWN_ORIGIN = { col: 4, row: -1 };
-const DROP_INTERVAL_MS = 700;
-const LINE_SCORES = [0, 100, 300, 500, 800]; // classic-ish bonus for 1/2/3/4 lines at once
+const DROP_DIRECTION = { dcol: 0, drow: 1 }; // "gravity" for this stage — a different stage could configure any direction
+const TIER_SCORES = { single: 100, double: 300, triple: 500, tetris: 800 };
+const BASE_DROP_INTERVAL_MS = 700;
+const LINES_PER_LEVEL = 10;
+const DROP_INTERVAL_DECAY_FACTOR = 0.85; // each level, the drop interval shrinks by this factor
+const MIN_DROP_INTERVAL_MS = 100; // floor, so speed-up can't reach 0/negative
+const NEXT_PREVIEW_CELL_SIZE = 20;
 
 const worldEl = document.getElementById("world");
 const scoreEl = document.getElementById("score");
+const levelEl = document.getElementById("level");
 const statusEl = document.getElementById("status");
+const nextPieceEl = document.getElementById("next-piece");
 
 let world;
 let occupied;
 let current;
 let score;
+let level;
+let totalLinesCleared;
 let gameOver;
 let dropTimer;
+let dropIntervalMs;
+let spawner;
+let lineClearTrigger;
+let stage;
+let dispatch;
+
+function currentDropInterval() {
+  return Math.max(
+    MIN_DROP_INTERVAL_MS,
+    Math.round(BASE_DROP_INTERVAL_MS * Math.pow(DROP_INTERVAL_DECAY_FACTOR, level - 1))
+  );
+}
+
+// Shows the spawner's lookahead — what spawner.next() will return the
+// *following* time spawnNext() runs, i.e. the piece after the one
+// currently falling.
+function renderNextPiece() {
+  clearChildren(nextPieceEl);
+  const type = spawner.peek();
+  for (const cell of cellsForRotation(type, 0)) {
+    const rect = createSvgElement("rect", {
+      width: NEXT_PREVIEW_CELL_SIZE - 2,
+      height: NEXT_PREVIEW_CELL_SIZE - 2,
+      x: (cell.col + 2) * NEXT_PREVIEW_CELL_SIZE + 1,
+      y: (cell.row + 2) * NEXT_PREVIEW_CELL_SIZE + 1,
+      fill: PIECE_COLORS[type],
+      rx: 3,
+    });
+    nextPieceEl.appendChild(rect);
+  }
+}
 
 function resetGame() {
   clearChildren(worldEl);
@@ -38,37 +84,52 @@ function resetGame() {
   occupied = new Set();
   current = null;
   score = 0;
+  level = 1;
+  totalLinesCleared = 0;
   gameOver = false;
   dropTimer = 0;
+  dropIntervalMs = currentDropInterval();
+  spawner = createSpawner({ candidates: PIECE_TYPES });
+
+  lineClearTrigger = createTieredGoalTrigger({
+    condition: () => checkCompleteRows(occupied, BOUNDS),
+    tierNames: ["single", "double", "triple", "tetris"],
+    onAchieve: (_world, rows, tier) => clearRows(rows, tier),
+  });
+
+  stage = {
+    systems: [{ fn: dropSystem, config: null }],
+    controls: {
+      moveLeft: () => attemptMove(-1),
+      moveRight: () => attemptMove(1),
+      rotate: () => attemptRotate(),
+      softDrop: () => softDropTick(),
+      hardDrop: () => hardDrop(),
+    },
+  };
+  dispatch = createActionDispatcher(stage);
+
   scoreEl.textContent = "0";
+  levelEl.textContent = "Level 1";
   statusEl.textContent = "Arrow keys to play";
   statusEl.classList.remove("game-over");
   spawnNext();
 }
 
 function spawnNext() {
-  const type = randomPieceType();
+  const type = spawner.next();
   current = spawnPiece(world, worldEl, type, SPAWN_ORIGIN, CELL_SIZE);
   if (!canPlace(occupied, absoluteCells(current), BOUNDS)) {
     endGame();
   }
+  renderNextPiece();
 }
 
 function endGame() {
   gameOver = true;
-  statusEl.textContent = `Game over — press any key to restart`;
+  statusEl.textContent = "Game over — press any key to restart";
   statusEl.classList.add("game-over");
 }
-
-// The trigger system's first real use case: "which rows are complete" is
-// the condition, "clear them and shift everything above down" is the
-// action. Reading `occupied`/`world` from the closure rather than
-// passing them through the trigger's own `world` arg since Tetris keeps
-// its board state (occupied cells) separately from the ECS world.
-const lineClearTrigger = createTrigger({
-  condition: () => checkCompleteRows(occupied, BOUNDS),
-  action: (_world, rows) => clearRows(rows),
-});
 
 function lockPiece() {
   const color = current.color;
@@ -80,15 +141,12 @@ function lockPiece() {
   current.el.remove();
   current = null;
 
-  const fired = runTriggers(world, [lineClearTrigger]);
-  const clearedCount = fired[0]?.matches.length ?? 0;
-  score += LINE_SCORES[clearedCount] ?? 0;
-  scoreEl.textContent = String(score);
+  runTriggers(world, [lineClearTrigger]);
 
   spawnNext();
 }
 
-function clearRows(rows) {
+function clearRows(rows, tier) {
   const rowSet = new Set(rows);
   for (const block of query(world, ["entityType", "col", "row"])) {
     if (block.entityType !== "block") continue;
@@ -104,36 +162,54 @@ function clearRows(rows) {
   // occupiedAfterClear's doc comment for the ordering bug that pattern
   // had (regression-tested in packages/grid/test/collision.test.js).
   occupied = occupiedAfterClear(occupied, rows);
+
+  totalLinesCleared += rows.length;
+  level = 1 + Math.floor(totalLinesCleared / LINES_PER_LEVEL);
+  dropIntervalMs = currentDropInterval();
+  score += TIER_SCORES[tier] * level;
+
+  scoreEl.textContent = String(score);
+  levelEl.textContent = `Level ${level}`;
 }
 
-function moveHorizontal(dir) {
+function attemptMove(dir) {
   if (gameOver || !current) return;
-  const candidate = { ...current, col: current.col + dir };
-  if (canPlace(occupied, absoluteCells(candidate), BOUNDS)) {
-    current.col += dir;
-    renderCellGroup(current);
-  }
+  attemptTransform(current, { col: current.col + dir }, occupied, BOUNDS);
 }
 
-function rotate() {
+function attemptRotate() {
   if (gameOver || !current) return;
   const nextRotation = (current.rotation + 1) % 4;
-  const candidate = { ...current, cells: cellsForRotation(current.pieceType, nextRotation) };
-  if (canPlace(occupied, absoluteCells(candidate), BOUNDS)) {
-    current.rotation = nextRotation;
-    current.cells = candidate.cells;
-    renderCellGroup(current);
-  }
+  attemptTransform(
+    current,
+    { rotation: nextRotation, cells: cellsForRotation(current.pieceType, nextRotation) },
+    occupied,
+    BOUNDS
+  );
 }
 
 function softDropTick() {
   if (gameOver || !current) return;
-  const candidate = { ...current, row: current.row + 1 };
-  if (canPlace(occupied, absoluteCells(candidate), BOUNDS)) {
-    current.row += 1;
-    renderCellGroup(current);
-  } else {
+  if (!applyGridGravity(current, DROP_DIRECTION, occupied, BOUNDS)) {
     lockPiece();
+  }
+}
+
+function hardDrop() {
+  if (gameOver || !current) return;
+  // eslint-disable-next-line no-empty -- drop until blocked, no per-step work needed
+  while (applyGridGravity(current, DROP_DIRECTION, occupied, BOUNDS)) {}
+  lockPiece();
+}
+
+// The per-tick system driving the timed fall — registered on the stage's
+// systems list like any other per-tick system would be.
+function dropSystem(_world, dt) {
+  if (gameOver || !current) return;
+  dropTimer += dt * 1000;
+  if (dropTimer >= dropIntervalMs) {
+    dropTimer = 0;
+    softDropTick();
   }
 }
 
@@ -144,17 +220,20 @@ window.addEventListener("keydown", (e) => {
   }
   switch (e.key) {
     case "ArrowLeft":
-      moveHorizontal(-1);
+      dispatch("moveLeft");
       break;
     case "ArrowRight":
-      moveHorizontal(1);
+      dispatch("moveRight");
       break;
     case "ArrowDown":
-      softDropTick();
+      dispatch("softDrop");
       dropTimer = 0;
       break;
     case "ArrowUp":
-      rotate();
+      dispatch("rotate");
+      break;
+    case " ":
+      dispatch("hardDrop");
       break;
     default:
       return;
@@ -164,17 +243,13 @@ window.addEventListener("keydown", (e) => {
 
 function update(dt) {
   if (gameOver) return;
-  dropTimer += dt * 1000;
-  if (dropTimer >= DROP_INTERVAL_MS) {
-    dropTimer = 0;
-    softDropTick();
-  }
+  runStage(stage, world, dt);
 }
 
 function render() {
-  // Grid pieces render on mutation (see renderCellGroup calls above), not
-  // every frame — nothing to do here. update()/render() still run through
-  // the shared engine loop for the drop timer.
+  // Grid pieces render on mutation (see attemptTransform/applyGridGravity
+  // above), not every frame — nothing to do here. update()/render() still
+  // run through the shared engine loop for the drop timer.
 }
 
 resetGame();

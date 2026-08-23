@@ -102,4 +102,26 @@ describe("createGamePR", () => {
     );
     expect(url).toBe("https://github.com/fcmzelaya/bloobitygook/pull/1");
   });
+
+  it("scaffolds a full Tetris instance instead of the blank shell when gameType is 'tetris'", async () => {
+    const octokit = makeFakeOctokit();
+    await createGamePR(octokit, {
+      id: "puzzler",
+      title: "Puzzler",
+      description: "",
+      port: 5183,
+      gameType: "tetris",
+      tetrisConfig: { cols: 8, rows: 16 },
+    });
+
+    const writtenPaths = octokit.repos.createOrUpdateFileContents.mock.calls.map((call) => call[0].path);
+    expect(writtenPaths).toContain("apps/puzzler/src/main.js");
+
+    const mainJsCall = octokit.repos.createOrUpdateFileContents.mock.calls.find(
+      (call) => call[0].path === "apps/puzzler/src/main.js"
+    );
+    const decoded = Buffer.from(mainJsCall[0].content, "base64").toString("utf-8");
+    expect(decoded).toContain("const BOUNDS = { cols: 8, rows: 16 };");
+    expect(decoded).toContain('from "@bloobitygook/tetris-pieces"');
+  });
 });

@@ -75,10 +75,6 @@ export const PIECE_COLORS = {
 
 export const PIECE_TYPES = Object.keys(PIECES);
 
-export function randomPieceType() {
-  return PIECE_TYPES[Math.floor(Math.random() * PIECE_TYPES.length)];
-}
-
 export function cellsForRotation(type, rotation) {
   return [{ col: 0, row: 0 }, ...PIECES[type][rotation]];
 }

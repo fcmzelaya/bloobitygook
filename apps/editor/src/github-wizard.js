@@ -1,5 +1,6 @@
 import { Octokit } from "@octokit/rest";
 import { generateTemplateFiles } from "./scaffold/template.js";
+import { generateTetrisTemplateFiles } from "./scaffold/tetris-template.js";
 import { addDevScriptToRootPackageJson, addAppToComposeScript } from "./scaffold/repo-edits.js";
 
 const OWNER = "fcmzelaya";
@@ -13,7 +14,7 @@ export function createGithubClient(token) {
 // Takes an Octokit-shaped client as an explicit argument (rather than
 // constructing one internally) so this orchestration can be unit tested
 // against a fake client, no real network calls involved.
-export async function createGamePR(octokit, { id, title, description, port }) {
+export async function createGamePR(octokit, { id, title, description, port, gameType = "blank", tetrisConfig = {} }) {
   const branch = `wizard/${id}`;
 
   const { data: baseRef } = await octokit.git.getRef({ owner: OWNER, repo: REPO, ref: `heads/${BASE_BRANCH}` });
@@ -24,7 +25,10 @@ export async function createGamePR(octokit, { id, title, description, port }) {
     sha: baseRef.object.sha,
   });
 
-  const files = generateTemplateFiles({ id, title, port });
+  const files =
+    gameType === "tetris"
+      ? generateTetrisTemplateFiles({ id, title, port, ...tetrisConfig })
+      : generateTemplateFiles({ id, title, port });
   // GitHub's contents API requires the existing file's blob sha when
   // *updating* a file that's already on the branch (unlike creating a new
   // one, which needs none) — omitting it 422s with "sha wasn't supplied".

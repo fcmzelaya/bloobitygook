@@ -12,10 +12,13 @@
   "dependencies": {
     "@bloobitygook/engine": "workspace:*",
     "@bloobitygook/grid": "workspace:*",
-    "@bloobitygook/triggers": "workspace:*"
+    "@bloobitygook/triggers": "workspace:*",
+    "@bloobitygook/stage": "workspace:*",
+    "@bloobitygook/tetris-pieces": "workspace:*"
   },
   "devDependencies": {
     "vite": "^6.0.0",
-    "vitest": "^3.0.0"
+    "vitest": "^3.0.0",
+    "jsdom": "^27.0.1"
   }
 }
