@@ -91,6 +91,7 @@ function buildPrBody({ id, title, description, port }) {
     `**Dev port:** ${port} — adjust \`apps/${id}/vite.config.js\` if that conflicts with something else you're running locally.`,
     "",
     "### Still needs a human",
+    `- [ ] Run \`pnpm install\` locally on this branch and commit the updated \`pnpm-lock.yaml\` — the wizard writes files via the GitHub API and can't run pnpm itself, so \`apps/${id}\`'s new dependencies aren't in the lockfile yet. CI's \`--frozen-lockfile\` install will fail until this is done.`,
     "- [ ] Write the actual game",
     `- [ ] Once merged and deployed, publish a manifest entry for it from the editor's "Manage Games" panel so it shows up on the hub`,
   ]
