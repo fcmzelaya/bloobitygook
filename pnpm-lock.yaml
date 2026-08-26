@@ -45,6 +45,16 @@ importers:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@26.2.0)(jsdom@27.4.0)
 
+  apps/fertris:
+    dependencies:
+      '@bloobitygook/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
+    devDependencies:
+      vite:
+        specifier: ^6.0.0
+        version: 6.4.3(@types/node@26.2.0)
+
   apps/hub:
     dependencies:
       '@bloobitygook/game-manifest':
