@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>bloobitygook — Fertris</title>
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: #10131a;
+      overflow: hidden;
+    }
+    #stage {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <svg id="stage" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid meet">
+    <rect x="0" y="0" width="800" height="600" fill="#1a1f2b" />
+    <g id="world"></g>
+  </svg>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
