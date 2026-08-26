@@ -16,6 +16,7 @@ const APPS = [
   ["tetris", "tetris"],
   ["pacman", "pacman"],
   ["play", "blob"],
+  ["fertris", "fertris"],
 ];
 
 if (existsSync(outDir)) rmSync(outDir, { recursive: true });
