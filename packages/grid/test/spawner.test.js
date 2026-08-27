@@ -1,5 +1,14 @@
 import { describe, it, expect } from "vitest";
-import { createSpawner } from "../src/spawner.js";
+import { createSpawner, SPAWNER_STRATEGIES } from "../src/spawner.js";
+
+describe("SPAWNER_STRATEGIES", () => {
+  it("lists every strategy name createSpawner accepts", () => {
+    expect(SPAWNER_STRATEGIES).toContain("random");
+    for (const strategy of SPAWNER_STRATEGIES) {
+      expect(() => createSpawner({ candidates: ["a"], strategy })).not.toThrow();
+    }
+  });
+});
 
 describe("createSpawner", () => {
   it("only ever returns candidates from the given set", () => {

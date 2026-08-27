@@ -1,6 +1,5 @@
 import { createWorld, startLoop } from "@bloobitygook/engine/core";
 import {
-  loadScene,
   spawnBall,
   randomBallColor,
   gravitySystem,
@@ -10,7 +9,14 @@ import {
   deformationSystem,
   renderSystem,
 } from "@bloobitygook/engine/physics";
+import { STANDARD_CATALOG, loadScene } from "@bloobitygook/objects";
 import { scenes } from "./scenes.js";
+
+// This demo only ever spawns balls directly (never through a palette), so
+// it narrows the catalog to just that one entry purely so the saved scene
+// files' "ball" type still resolves through the same shared loadScene the
+// editor uses — it doesn't need the rest of the catalog machinery.
+const catalog = STANDARD_CATALOG.enabledIn(["ball"]);
 
 const stage = document.getElementById("stage");
 const worldEl = document.getElementById("world");
@@ -30,7 +36,7 @@ function toStagePoint(clientX, clientY) {
 function loadSceneById(id) {
   const scene = scenes.find((s) => s.id === id) ?? scenes[0];
   if (!scene) return;
-  gravity = loadScene(world, worldEl, scene.data);
+  gravity = loadScene(world, worldEl, scene.data, catalog);
 }
 
 if (scenes.length > 1) {

@@ -1,11 +1,15 @@
 import { query } from "@bloobitygook/engine/core";
 
-// Hit-tested by distance-to-center; later-spawned (visually on top) balls
-// win on overlap since query() returns entities in spawn order.
-export function findBallAt(world, x, y) {
-  const balls = query(world, ["radius", "x", "y"]);
-  for (let i = balls.length - 1; i >= 0; i--) {
-    const e = balls[i];
+// Generalized from the old ball-only findBallAt: any entity with a
+// pixel-space x/y/radius (ball, or the spawner marker) hit-tests the same
+// way — distance-to-center. A grid-based entity (a placed Tetris piece)
+// has no radius at all, so it's simply excluded from this query rather
+// than needing its own bounding-box hit-test, since nothing yet lets a
+// placed piece be reselected after placement.
+export function findEntityAt(world, x, y) {
+  const candidates = query(world, ["radius", "x", "y"]);
+  for (let i = candidates.length - 1; i >= 0; i--) {
+    const e = candidates[i];
     if (Math.hypot(e.x - x, e.y - y) <= e.radius) return e;
   }
   return null;
@@ -21,6 +25,6 @@ export function isPlaceGravityButtonEnabled(mode, gravity) {
 
 export function statusText(mode) {
   return mode === "setup"
-    ? "Setup — click the stage to place a ball, or click a ball to edit it"
+    ? "Setup — click the stage to place the selected object, or click one to edit it"
     : "Running — physics active";
 }

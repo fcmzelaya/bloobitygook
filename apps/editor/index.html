@@ -237,6 +237,56 @@
       width: 100px;
     }
 
+    /* Palette — which object a stage click places next, grouped by
+       category. Sits below the Toolbar at the same left offset. */
+    #palette {
+      position: fixed;
+      top: 100px;
+      left: 292px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      max-width: calc(100vw - 304px);
+      z-index: 10;
+    }
+    .palette-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .palette-group-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #6b7284;
+      margin-right: 2px;
+    }
+    .palette-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font: inherit;
+      font-size: 12px;
+      padding: 5px 10px;
+      border-radius: 6px;
+      border: 1px solid #3a4152;
+      background: #1e2431;
+      color: #dfe4ee;
+      cursor: pointer;
+    }
+    .palette-btn:hover { background: #2a3244; }
+    .palette-btn.active {
+      background: #3a4a63;
+      border-color: #5b7ca8;
+    }
+    .palette-swatch {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--swatch, #8b93a7);
+    }
+
     #inspector {
       position: fixed;
       top: 56px;

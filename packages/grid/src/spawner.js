@@ -8,6 +8,10 @@ const PICK_STRATEGIES = {
   random: (candidates) => () => candidates[Math.floor(Math.random() * candidates.length)],
 };
 
+// Names a caller can offer in a strategy picker (e.g. the editor's spawner
+// Inspector) without hardcoding "random" as a magic string of its own.
+export const SPAWNER_STRATEGIES = Object.keys(PICK_STRATEGIES);
+
 export function createSpawner({ candidates, strategy = "random" }) {
   const factory = PICK_STRATEGIES[strategy];
   if (!factory) throw new Error(`Unknown spawner strategy "${strategy}"`);

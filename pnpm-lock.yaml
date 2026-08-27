@@ -16,6 +16,9 @@ importers:
       '@bloobitygook/game-manifest':
         specifier: workspace:*
         version: link:../../packages/game-manifest
+      '@bloobitygook/objects':
+        specifier: workspace:*
+        version: link:../../packages/objects
       '@bloobitygook/tetris-pieces':
         specifier: workspace:*
         version: link:../../packages/tetris-pieces
@@ -95,6 +98,9 @@ importers:
       '@bloobitygook/engine':
         specifier: workspace:*
         version: link:../../packages/engine
+      '@bloobitygook/objects':
+        specifier: workspace:*
+        version: link:../../packages/objects
     devDependencies:
       vite:
         specifier: ^6.0.0
@@ -171,6 +177,25 @@ importers:
       '@bloobitygook/engine':
         specifier: workspace:*
         version: link:../engine
+    devDependencies:
+      jsdom:
+        specifier: ^27.0.1
+        version: 27.4.0
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@26.2.0)(jsdom@27.4.0)
+
+  packages/objects:
+    dependencies:
+      '@bloobitygook/engine':
+        specifier: workspace:*
+        version: link:../engine
+      '@bloobitygook/grid':
+        specifier: workspace:*
+        version: link:../grid
+      '@bloobitygook/tetris-pieces':
+        specifier: workspace:*
+        version: link:../tetris-pieces
     devDependencies:
       jsdom:
         specifier: ^27.0.1

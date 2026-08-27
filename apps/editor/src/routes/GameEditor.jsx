@@ -5,6 +5,7 @@ import { useCloudAuth } from "../CloudAuthContext.jsx";
 import { GameMetadataForm } from "../components/GameMetadataForm.jsx";
 import { Stage } from "../components/Stage.jsx";
 import { Toolbar } from "../components/Toolbar.jsx";
+import { Palette } from "../components/Palette.jsx";
 import { Inspector } from "../components/Inspector.jsx";
 
 // Editing is always scoped to one game. The draft copy (canEdit's working
@@ -50,6 +51,7 @@ export function GameEditor({ gameId }) {
         <div id="game-scene-editor">
           <Stage sceneId={manifest.sceneId} />
           <Toolbar sceneId={manifest.sceneId} />
+          <Palette />
           <Inspector />
         </div>
       ) : (

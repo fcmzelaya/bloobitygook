@@ -27,3 +27,22 @@ export function spawnBall(world, worldEl, def) {
     el, circleEl,
   });
 }
+
+// Paired with spawnBall — same field list scene.js used to hardcode
+// inline, moved here so it lives next to the entity shape it describes.
+export function serializeBall(entity) {
+  return {
+    x: round(entity.x),
+    y: round(entity.y),
+    vx: round(entity.vx ?? 0),
+    vy: round(entity.vy ?? 0),
+    radius: entity.radius,
+    color: entity.color,
+    restitution: entity.restitution,
+    friction: entity.friction,
+  };
+}
+
+function round(n) {
+  return Math.round(n * 100) / 100;
+}

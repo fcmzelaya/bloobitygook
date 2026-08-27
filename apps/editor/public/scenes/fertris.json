@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "catalogIds": ["o", "j", "l", "i", "t", "z", "s", "spawner"],
+  "gravity": { "mode": "uniform", "magnitude": 900, "x": 400, "y": 300 },
+  "objects": []
+}

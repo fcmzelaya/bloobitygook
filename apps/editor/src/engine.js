@@ -11,15 +11,12 @@ import {
   ballCollisionSystem,
   deformationSystem,
   renderSystem,
-  serializeScene,
-  loadScene,
   DEFAULT_GRAVITY,
   saveScene,
   openScene,
-  spawnBall,
-  randomBallColor,
 } from "@bloobitygook/engine/physics";
-import { findBallAt, isGravityMarkerVisible, isPlaceGravityButtonEnabled, statusText } from "./ui-helpers.js";
+import { STANDARD_CATALOG, catalogIdsOf, instantiateObject, serializeScene, loadScene } from "@bloobitygook/objects";
+import { findEntityAt, isGravityMarkerVisible, isPlaceGravityButtonEnabled, statusText } from "./ui-helpers.js";
 import { isCloudEnabled, publishScene, fetchPublishedScene } from "./publish.js";
 
 const BOUNDS = { floorY: 560, left: 0, right: 800 };
@@ -27,6 +24,8 @@ const world = createWorld();
 
 let gravity = { mode: "uniform", magnitude: 900, x: 400, y: 300 };
 let mode = "setup"; // "setup" (frozen, editable) or "running" (physics live)
+let catalog = STANDARD_CATALOG.enabledIn(["ball"]); // replaced per-game in initEngine
+let armedId = "ball"; // which catalog entry a stage click places next
 let selected = null;
 let placingGravityPoint = false;
 let fileHandle = null; // reused so repeat Saves overwrite in place, not re-prompt
@@ -40,13 +39,37 @@ let stopLoop = null; // set once startLoop() runs; disposeEngine() calls it and 
 let snapshot = computeSnapshot();
 const listeners = new Set();
 
+function catalogEntrySnapshot(def) {
+  return { id: def.id, label: def.label, swatch: def.swatch, category: def.category };
+}
+
+// Ball's fields stay exposed as before; a spawner exposes its own config
+// fields instead. Anything else (a placed piece) exposes just enough for
+// Inspector's minimal fallback branch (label + Delete).
+function selectedSnapshot(entity) {
+  const def = catalog.byId(entity.catalogId);
+  // `definitionCategory` names which catalog category this entity's own
+  // definition belongs to ("physics"/"piece"/"tool"); a spawner also has
+  // its own `category` field (which OTHER category it spawns from) — kept
+  // as separate names so Inspector can read/write `category` symmetrically
+  // via updateSelectedProp without colliding with the definition's.
+  const base = { catalogId: entity.catalogId, definitionCategory: def?.category ?? null, label: def?.label ?? entity.catalogId };
+  if (entity.catalogId === "ball") {
+    return { ...base, radius: entity.radius, color: entity.color, restitution: entity.restitution, friction: entity.friction };
+  }
+  if (base.definitionCategory === "tool") {
+    return { ...base, x: entity.x, y: entity.y, category: entity.category, allowedTypes: entity.allowedTypes, strategy: entity.strategy };
+  }
+  return base;
+}
+
 function computeSnapshot() {
   return {
     mode,
     gravity,
-    selected: selected
-      ? { radius: selected.radius, color: selected.color, restitution: selected.restitution, friction: selected.friction }
-      : null,
+    catalog: catalog.all().map(catalogEntrySnapshot),
+    armedId,
+    selected: selected ? selectedSnapshot(selected) : null,
     placeGravityBtnEnabled: isPlaceGravityButtonEnabled(mode, gravity),
     status,
   };
@@ -81,15 +104,24 @@ function syncBallVisual(entity) {
   entity.circleEl.setAttribute("fill", entity.color);
 }
 
+// Ball outlines its circle; a spawner outlines its marker shape; anything
+// else has no outline element and is silently skipped (harmless, and
+// currently unreachable since findEntityAt only hit-tests radius-bearing
+// entities — ball and spawner are the only two so far).
+function outlineElOf(entity) {
+  return entity.circleEl ?? entity.markerEl ?? null;
+}
+
 function selectEntityInternal(entity) {
-  if (selected) selected.circleEl.removeAttribute("stroke");
+  if (selected) outlineElOf(selected)?.removeAttribute("stroke");
   selected = entity;
-  selected.circleEl.setAttribute("stroke", "#ffffff");
-  selected.circleEl.setAttribute("stroke-width", "3");
+  const outlineEl = outlineElOf(selected);
+  outlineEl?.setAttribute("stroke", "#ffffff");
+  outlineEl?.setAttribute("stroke-width", "3");
 }
 
 function clearSelectionInternal() {
-  if (selected) selected.circleEl.removeAttribute("stroke");
+  if (selected) outlineElOf(selected)?.removeAttribute("stroke");
   selected = null;
 }
 
@@ -98,10 +130,16 @@ export function clearSelection() {
   notify();
 }
 
+export function setPaletteSelection(id) {
+  if (!catalog.byId(id)) return;
+  armedId = id;
+  notify();
+}
+
 export function updateSelectedProp(key, value) {
   if (!selected) return;
   selected[key] = value;
-  if (key === "radius" || key === "color") syncBallVisual(selected);
+  if (selected.catalogId === "ball" && (key === "radius" || key === "color")) syncBallVisual(selected);
   notify();
 }
 
@@ -158,28 +196,29 @@ export function handleStagePointerDown(clientX, clientY) {
 
   if (mode !== "setup") return;
 
-  const hit = findBallAt(world, x, y);
+  const hit = findEntityAt(world, x, y);
   if (hit) {
     selectEntityInternal(hit);
     notify();
     return;
   }
 
-  const ball = spawnBall(world, worldEl, {
-    x,
-    y: Math.min(y, BOUNDS.floorY - 20),
-    radius: 16 + Math.random() * 24,
-    color: randomBallColor(),
-    restitution: 0.5 + Math.random() * 0.4,
-    friction: 0.1 + Math.random() * 0.3,
-  });
-  selectEntityInternal(ball);
+  const definition = catalog.byId(armedId);
+  if (!definition) return;
+  // Clamped for any pixel-space placement (not just ball) so nothing
+  // lands visually below the fixed 800x600 stage's floor rect — a
+  // stage-geometry constraint, not something object definitions need to
+  // know about themselves.
+  const spawnY = definition.coordinateSpace === "pixel" ? Math.min(y, BOUNDS.floorY - 20) : y;
+  const def = definition.buildSpawnDef(x, spawnY, catalog);
+  const entity = instantiateObject(catalog, armedId, world, worldEl, def);
+  selectEntityInternal(entity);
   notify();
 }
 
 export async function saveSceneToFile() {
   try {
-    fileHandle = await saveScene(serializeScene(world, gravity), { handle: fileHandle });
+    fileHandle = await saveScene(serializeScene(world, gravity, catalog), { handle: fileHandle });
     status = "Scene saved";
   } catch (err) {
     if (err.name !== "AbortError") status = `Save failed: ${err.message}`;
@@ -191,9 +230,7 @@ export async function openSceneFromFile() {
   try {
     const { data, handle } = await openScene();
     fileHandle = handle;
-    gravity = loadScene(world, worldEl, data);
-    clearSelectionInternal();
-    updateGravityMarker();
+    applyLoadedScene(data);
     status = "Scene loaded";
   } catch (err) {
     if (err.name !== "AbortError") status = `Open failed: ${err.message}`;
@@ -203,7 +240,7 @@ export async function openSceneFromFile() {
 
 export async function publishCurrentScene(sceneId) {
   try {
-    await publishScene(sceneId, serializeScene(world, gravity));
+    await publishScene(sceneId, serializeScene(world, gravity, catalog));
     status = `Published "${sceneId}"`;
   } catch (err) {
     status = `Publish failed: ${err.message}`;
@@ -214,14 +251,25 @@ export async function publishCurrentScene(sceneId) {
 export async function loadSceneFromCloud(sceneId) {
   try {
     const data = await fetchPublishedScene(sceneId);
-    gravity = loadScene(world, worldEl, data);
-    clearSelectionInternal();
-    updateGravityMarker();
+    applyLoadedScene(data);
     status = `Loaded "${sceneId}" from cloud`;
   } catch (err) {
     status = `Cloud load failed: ${err.message}`;
   }
   notify();
+}
+
+// Shared by every "load scene data into the live world" path (opening a
+// local file, loading from cloud, or the initial initEngine load) — each
+// one has to rebuild the catalog from the loaded file's own catalogIds,
+// not just re-run loadScene against whatever catalog happened to be
+// active before, since a loaded file can enable a different object set.
+function applyLoadedScene(data) {
+  catalog = STANDARD_CATALOG.enabledIn(catalogIdsOf(data));
+  armedId = catalog.all()[0]?.id ?? null;
+  gravity = loadScene(world, worldEl, data, catalog);
+  clearSelectionInternal();
+  updateGravityMarker();
 }
 
 export function setStatus(text) {
@@ -277,9 +325,7 @@ export async function initEngine({ stageEl: stage, worldEl: worldGroup, gravityM
   gravityMarkerEl = marker;
 
   const data = await loadSceneData(sceneId);
-  gravity = loadScene(world, worldEl, data);
-  clearSelectionInternal();
-  updateGravityMarker();
+  applyLoadedScene(data);
   mode = "setup";
   status = statusText(mode);
   notify();
@@ -303,6 +349,8 @@ export function disposeEngine() {
   placingGravityPoint = false;
   fileHandle = null;
   gravity = DEFAULT_GRAVITY;
+  catalog = STANDARD_CATALOG.enabledIn(["ball"]);
+  armedId = "ball";
   mode = "setup";
   status = "";
   stageEl = null;
