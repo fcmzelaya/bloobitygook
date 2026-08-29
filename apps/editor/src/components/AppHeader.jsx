@@ -15,6 +15,9 @@ export function AppHeader({ onOpenWizard }) {
 
   return (
     <div id="app-header">
+      <span id="app-title" title="bloobitygook's dev tool for building and publishing games">
+        bloobitygook editor
+      </span>
       {location.pathname !== "/" && (
         <Link id="dashboard-link" to="/">
           &larr; Dashboard
@@ -22,9 +25,19 @@ export function AppHeader({ onOpenWizard }) {
       )}
       <span id="status">{snap.status}</span>
       <div id="app-header-actions">
-        <button id="wizard-btn" onClick={onOpenWizard}>New Game</button>
+        <button
+          id="wizard-btn"
+          onClick={onOpenWizard}
+          title="Scaffold a brand-new game as a real app, via a GitHub pull request"
+        >
+          New Game
+        </button>
         {isCloudEnabled && (
-          <button id="signin-btn" onClick={() => (user ? signOut() : signIn())}>
+          <button
+            id="signin-btn"
+            onClick={() => (user ? signOut() : signIn())}
+            title={user ? undefined : "Sign in to see your drafts and save changes"}
+          >
             {user ? `Sign out (${user.email})` : "Sign in"}
           </button>
         )}

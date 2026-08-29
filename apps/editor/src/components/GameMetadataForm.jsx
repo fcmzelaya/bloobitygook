@@ -42,6 +42,10 @@ export function GameMetadataForm({ initial, user, onSaved }) {
 
   return (
     <div id="game-metadata-form">
+      <p className="editor-hint">
+        Fill this in, then <strong>Save Draft</strong> to keep working privately, or <strong>Publish</strong> to make
+        it visible on the public hub.
+      </p>
       <label>
         ID (set by the route)
         <input id="game-id" type="text" value={form.id} disabled />
@@ -61,7 +65,7 @@ export function GameMetadataForm({ initial, user, onSaved }) {
         />
       </label>
       <label>
-        Route
+        Route (the URL path this game is served at)
         <input id="game-route" type="text" placeholder="/tetris/" value={form.route} onChange={setField("route")} />
       </label>
       <label>
@@ -74,6 +78,10 @@ export function GameMetadataForm({ initial, user, onSaved }) {
           onChange={setField("sceneId")}
         />
       </label>
+      <p className="editor-hint">
+        Not every game has a visual scene (Tetris/Pac-Man don't) — give this one an id (any short name) only if it
+        should get the object-placement canvas below.
+      </p>
       <div className="checkbox-row">
         <input
           id="game-published"

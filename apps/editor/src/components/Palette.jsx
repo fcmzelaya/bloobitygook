@@ -18,6 +18,9 @@ export function Palette() {
 
   return (
     <div id="palette">
+      <div id="palette-hint" className="editor-hint">
+        Click a button to arm it, then click the stage (in Setup mode) to place one.
+      </div>
       {[...byCategory.entries()].map(([category, entries]) => (
         <div className="palette-group" key={category}>
           <div className="palette-group-label">{category}</div>
@@ -27,7 +30,7 @@ export function Palette() {
               className={`palette-btn${snap.armedId === entry.id ? " active" : ""}`}
               style={{ "--swatch": entry.swatch }}
               onClick={() => engine.setPaletteSelection(entry.id)}
-              title={entry.label}
+              title={`Place a ${entry.label} on the next stage click`}
             >
               <span className="palette-swatch" />
               {entry.label}

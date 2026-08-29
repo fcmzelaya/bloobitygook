@@ -55,7 +55,11 @@ export function GameEditor({ gameId }) {
           <Inspector />
         </div>
       ) : (
-        <p id="no-scene-note">Scene editing isn't available for this game yet.</p>
+        <p id="no-scene-note">
+          This game has no Scene ID set, so there's no visual canvas to edit here — set one above (any short name,
+          e.g. "default") to enable it, or leave it blank if this game's logic is entirely hand-coded (like Tetris or
+          Pac-Man).
+        </p>
       )}
     </div>
   );
