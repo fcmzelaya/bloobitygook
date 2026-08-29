@@ -1,0 +1,18 @@
+{
+  "cellSize": 32,
+  "playerSpeed": 100,
+  "ghostSpeed": 85,
+  "frightenedDurationSeconds": 6,
+  "playerSpawn": { "col": 5, "row": 4 },
+  "ghostSpawns": [{ "col": 5, "row": 3 }, { "col": 5, "row": 5 }],
+  "ghostColors": ["#ec7063", "#5dade2"],
+  "frightenedColor": "#3a4de0",
+  "wallColor": "#1e2d4d",
+  "pelletColor": "#f4d9a0",
+  "playerColor": "#f4d54a",
+  "pelletRadius": 2.5,
+  "powerPelletRadius": 6,
+  "keyDirections": { "ArrowUp": "up", "ArrowDown": "down", "ArrowLeft": "left", "ArrowRight": "right" },
+  "scoring": { "pellet": 10, "powerPellet": 50, "eatGhost": 200 },
+  "chompAnimation": { "radiusOffsets": [3, 8], "fps": 4 }
+}

@@ -41,4 +41,10 @@ describe("chooseDirection", () => {
     const dir = chooseDirection(0, 0, "up", { col: 5, row: 5 }, isBlocked, "closest");
     expect(dir).toBe("up");
   });
+
+  it("throws on an unknown targeting preference", () => {
+    expect(() => chooseDirection(0, 0, null, { col: 5, row: 0 }, openAll, "bogus")).toThrow(
+      /Unknown targeting preference/
+    );
+  });
 });

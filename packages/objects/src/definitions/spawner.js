@@ -59,3 +59,7 @@ export const spawnerDefinition = {
     return { x, y, category, allowedTypes, strategy: "random" };
   },
 };
+
+// Exported as default so packages/objects/src/standard.js can discover
+// this file via import.meta.glob without a hand-maintained import list.
+export default spawnerDefinition;

@@ -9,7 +9,6 @@ function toBase64(str) {
 const ROOT_PACKAGE_JSON = JSON.stringify({
   scripts: { build: 'pnpm --filter "./apps/*" -r run build && pnpm compose' },
 });
-const COMPOSE_SCRIPT = `const APPS = [\n  ["hub", ""],\n];\n`;
 
 function makeFakeOctokit() {
   return {
@@ -18,11 +17,9 @@ function makeFakeOctokit() {
       createRef: vi.fn().mockResolvedValue({}),
     },
     repos: {
-      getContent: vi.fn(({ path }) => {
-        const content = path === "package.json" ? ROOT_PACKAGE_JSON : COMPOSE_SCRIPT;
-        const sha = path === "package.json" ? "root-pkg-sha" : "compose-script-sha";
-        return Promise.resolve({ data: { content: toBase64(content), sha } });
-      }),
+      getContent: vi.fn(() =>
+        Promise.resolve({ data: { content: toBase64(ROOT_PACKAGE_JSON), sha: "root-pkg-sha" } })
+      ),
       createOrUpdateFileContents: vi.fn().mockResolvedValue({}),
     },
     pulls: {
@@ -44,7 +41,7 @@ describe("createGamePR", () => {
     );
   });
 
-  it("writes the 4 template files plus the 2 patched shared files, all to the new branch", async () => {
+  it("writes the 4 template files plus the 1 patched shared file, all to the new branch", async () => {
     const octokit = makeFakeOctokit();
     await createGamePR(octokit, { id: "pong", title: "Pong", description: "", port: 5181 });
 
@@ -56,7 +53,6 @@ describe("createGamePR", () => {
         "apps/pong/src/main.js",
         "apps/pong/vite.config.js",
         "package.json",
-        "scripts/compose-site.mjs",
       ].sort()
     );
     for (const call of octokit.repos.createOrUpdateFileContents.mock.calls) {
@@ -64,16 +60,12 @@ describe("createGamePR", () => {
     }
   });
 
-  it("passes each patched shared file's fetched sha back, as GitHub's contents API requires for an update (not a create)", async () => {
+  it("passes the patched shared file's fetched sha back, as GitHub's contents API requires for an update (not a create)", async () => {
     const octokit = makeFakeOctokit();
     await createGamePR(octokit, { id: "pong", title: "Pong", description: "", port: 5181 });
 
     const rootPkgCall = octokit.repos.createOrUpdateFileContents.mock.calls.find((call) => call[0].path === "package.json");
     expect(rootPkgCall[0].sha).toBe("root-pkg-sha");
-    const composeCall = octokit.repos.createOrUpdateFileContents.mock.calls.find(
-      (call) => call[0].path === "scripts/compose-site.mjs"
-    );
-    expect(composeCall[0].sha).toBe("compose-script-sha");
 
     // The 4 freshly generated apps/<id>/* files are brand new — no sha exists for them yet.
     const newFileCall = octokit.repos.createOrUpdateFileContents.mock.calls.find(
@@ -82,7 +74,7 @@ describe("createGamePR", () => {
     expect(newFileCall[0].sha).toBeUndefined();
   });
 
-  it("patches the shared files' fetched content, not a hardcoded copy", async () => {
+  it("patches the shared file's fetched content, not a hardcoded copy", async () => {
     const octokit = makeFakeOctokit();
     await createGamePR(octokit, { id: "pong", title: "Pong", description: "", port: 5181 });
 
@@ -116,12 +108,26 @@ describe("createGamePR", () => {
 
     const writtenPaths = octokit.repos.createOrUpdateFileContents.mock.calls.map((call) => call[0].path);
     expect(writtenPaths).toContain("apps/puzzler/src/main.js");
+    expect(writtenPaths).toContain("apps/puzzler/src/config.json");
 
     const mainJsCall = octokit.repos.createOrUpdateFileContents.mock.calls.find(
       (call) => call[0].path === "apps/puzzler/src/main.js"
     );
     const decoded = Buffer.from(mainJsCall[0].content, "base64").toString("utf-8");
-    expect(decoded).toContain("const BOUNDS = { cols: 8, rows: 16 };");
+    expect(decoded).toContain('import config from "./config.json"');
     expect(decoded).toContain('from "@bloobitygook/tetris-pieces"');
+
+    const configCall = octokit.repos.createOrUpdateFileContents.mock.calls.find(
+      (call) => call[0].path === "apps/puzzler/src/config.json"
+    );
+    const decodedConfig = JSON.parse(Buffer.from(configCall[0].content, "base64").toString("utf-8"));
+    expect(decodedConfig.bounds).toEqual({ cols: 8, rows: 16 });
+  });
+
+  it("throws on an unknown game type instead of silently falling back to blank", async () => {
+    const octokit = makeFakeOctokit();
+    await expect(
+      createGamePR(octokit, { id: "mystery", title: "Mystery", description: "", port: 5184, gameType: "platformer" })
+    ).rejects.toThrow(/Unknown game type/);
   });
 });

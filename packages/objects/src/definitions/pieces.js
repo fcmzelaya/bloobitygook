@@ -35,3 +35,8 @@ function makePieceDefinition(type, cellSize) {
 }
 
 export const pieceDefinitions = PIECE_TYPES.map((type) => makePieceDefinition(type, EDITOR_CELL_SIZE));
+
+// Exported as default (an array, unlike the other definitions files) so
+// packages/objects/src/standard.js can discover this file via
+// import.meta.glob without a hand-maintained import list.
+export default pieceDefinitions;

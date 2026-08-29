@@ -20,6 +20,11 @@ describe("generateTemplateFiles", () => {
     expect(pkg.scripts.build).toBe("vite build");
   });
 
+  it("package.json declares its own composed-site route, so compose-site.mjs needs no central edit", () => {
+    const pkg = JSON.parse(files["apps/pong/package.json"]);
+    expect(pkg.bloobitygook.route).toBe("pong");
+  });
+
   it("vite.config.js wires the given port and route base", () => {
     const config = files["apps/pong/vite.config.js"];
     expect(config).toContain("port: 5181");

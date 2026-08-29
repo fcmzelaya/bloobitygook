@@ -5,16 +5,20 @@ import { createBehavior, behaviorSystem } from "@bloobitygook/behavior";
 import { MAZE_ROWS, COLS, ROWS, TUNNEL_ROW, isWallAt, cellKindAt } from "./maze.js";
 import { tryMove, currentCell } from "./movement.js";
 import { chooseDirection } from "./ghostAI.js";
+import config from "./config.json";
 
-const CELL_SIZE = 32;
-const PLAYER_SPEED = 100; // px/sec
-const GHOST_SPEED = 85;
-const FRIGHTENED_DURATION = 6; // seconds
-const PLAYER_SPAWN = { col: 5, row: 4 };
-const GHOST_SPAWNS = [{ col: 5, row: 3 }, { col: 5, row: 5 }];
-const GHOST_COLORS = ["#ec7063", "#5dade2"];
+const CELL_SIZE = config.cellSize;
+const PLAYER_SPEED = config.playerSpeed; // px/sec
+const GHOST_SPEED = config.ghostSpeed;
+const FRIGHTENED_DURATION = config.frightenedDurationSeconds;
+const PLAYER_SPAWN = config.playerSpawn;
+const GHOST_SPAWNS = config.ghostSpawns;
+const GHOST_COLORS = config.ghostColors;
+// Derived from the loaded maze's own width, not itself config — a
+// different maze's corners should track its own COLS, not a baked number.
 const HOME_CORNERS = [{ col: 0, row: 0 }, { col: COLS - 1, row: 0 }];
-const FRIGHTENED_COLOR = "#3a4de0";
+const FRIGHTENED_COLOR = config.frightenedColor;
+const ENTITY_RADIUS = CELL_SIZE / 2 - config.chompAnimation.radiusOffsets[0];
 
 const worldEl = document.getElementById("world");
 const scoreEl = document.getElementById("score");
@@ -63,7 +67,7 @@ function drawWalls() {
         y: y - CELL_SIZE / 2,
         width: CELL_SIZE,
         height: CELL_SIZE,
-        fill: "#1e2d4d",
+        fill: config.wallColor,
       });
       worldEl.appendChild(el);
     }
@@ -80,8 +84,8 @@ function spawnPellets() {
       const kind = cellKindAt(col, row, skip);
       if (!kind) continue;
       const { x, y } = cellToPixel(col, row);
-      const radius = kind === "power" ? 6 : 2.5;
-      const el = createSvgElement("circle", { cx: x, cy: y, r: radius, fill: "#f4d9a0" });
+      const radius = kind === "power" ? config.powerPelletRadius : config.pelletRadius;
+      const el = createSvgElement("circle", { cx: x, cy: y, r: radius, fill: config.pelletColor });
       worldEl.appendChild(el);
       spawn(world, { entityType: "pellet", kind, col, row, el });
     }
@@ -90,10 +94,11 @@ function spawnPellets() {
 
 function spawnPlayer() {
   const { x, y } = cellToPixel(PLAYER_SPAWN.col, PLAYER_SPAWN.row);
-  const el = createSvgElement("circle", { cx: x, cy: y, r: CELL_SIZE / 2 - 3, fill: "#f4d54a" });
+  const el = createSvgElement("circle", { cx: x, cy: y, r: ENTITY_RADIUS, fill: config.playerColor });
   worldEl.appendChild(el);
   player = spawn(world, {
     entityType: "player",
+    movable: true,
     x,
     y,
     direction: null,
@@ -103,17 +108,21 @@ function spawnPlayer() {
     // Simple size-pulse "chomp" — swapping attributes over time, the
     // same mechanism packages/animation is built around, not a literal
     // mouth shape (that would need path-arc math this demo doesn't need).
-    animation: createAnimation([{ r: CELL_SIZE / 2 - 3 }, { r: CELL_SIZE / 2 - 8 }], 4),
+    animation: createAnimation(
+      config.chompAnimation.radiusOffsets.map((offset) => ({ r: CELL_SIZE / 2 - offset })),
+      config.chompAnimation.fps
+    ),
   });
 }
 
 function spawnGhosts() {
   ghosts = GHOST_SPAWNS.map((spawnCell, i) => {
     const { x, y } = cellToPixel(spawnCell.col, spawnCell.row);
-    const el = createSvgElement("circle", { cx: x, cy: y, r: CELL_SIZE / 2 - 3, fill: GHOST_COLORS[i] });
+    const el = createSvgElement("circle", { cx: x, cy: y, r: ENTITY_RADIUS, fill: GHOST_COLORS[i] });
     worldEl.appendChild(el);
     return spawn(world, {
       entityType: "ghost",
+      movable: true,
       x,
       y,
       direction: null,
@@ -153,7 +162,7 @@ function updateGhostDirection(ghost, target, preference) {
   ghost.queuedDirection = chooseDirection(col, row, ghost.direction, target, isBlocked, preference);
 }
 
-const KEY_DIRECTIONS = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right" };
+const KEY_DIRECTIONS = config.keyDirections;
 window.addEventListener("keydown", (e) => {
   if (gameOver || won) {
     if (e.key.startsWith("Arrow")) resetGame();
@@ -176,7 +185,7 @@ const leftPortal = createZone(-CELL_SIZE * 1.5, tunnelY - CELL_SIZE / 2, CELL_SI
 const rightPortal = createZone(COLS * CELL_SIZE + CELL_SIZE * 0.5, tunnelY - CELL_SIZE / 2, CELL_SIZE, CELL_SIZE);
 
 function movingEntities(w) {
-  return query(w, ["entityType", "x", "y"]).filter((e) => e.entityType === "player" || e.entityType === "ghost");
+  return query(w, ["movable", "x", "y"]);
 }
 
 const portalTriggers = [
@@ -196,7 +205,7 @@ function handleEating() {
   for (const pellet of query(world, ["entityType", "col", "row"])) {
     if (pellet.entityType !== "pellet") continue;
     if (pellet.col !== pCell.col || pellet.row !== pCell.row) continue;
-    score += pellet.kind === "power" ? 50 : 10;
+    score += pellet.kind === "power" ? config.scoring.powerPellet : config.scoring.pellet;
     if (pellet.kind === "power") frightenedTimer = FRIGHTENED_DURATION;
     destroy(world, pellet.id);
     pellet.el.remove();
@@ -215,7 +224,7 @@ function handleEating() {
     const gCell = currentCell(ghost, CELL_SIZE);
     if (gCell.col !== pCell.col || gCell.row !== pCell.row) continue;
     if (frightenedTimer > 0) {
-      score += 200;
+      score += config.scoring.eatGhost;
       scoreEl.textContent = String(score);
       const { x, y } = cellToPixel(ghost.spawnCell.col, ghost.spawnCell.row);
       ghost.x = x;
@@ -248,10 +257,8 @@ function update(dt) {
 }
 
 function render() {
-  for (const e of query(world, ["entityType", "x", "y", "el"])) {
-    if (e.entityType === "player" || e.entityType === "ghost") {
-      setAttrs(e.el, { cx: e.x, cy: e.y });
-    }
+  for (const e of query(world, ["movable", "x", "y", "el"])) {
+    setAttrs(e.el, { cx: e.x, cy: e.y });
   }
 }
 

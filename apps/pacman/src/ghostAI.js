@@ -2,6 +2,15 @@ import { DIRECTIONS } from "./movement.js";
 
 const REVERSE = { up: "down", down: "up", left: "right", right: "left" };
 
+// Which targeting mode a ghost uses is a name-keyed registry, not an
+// inline branch — mirrors packages/grid's PICK_STRATEGIES/collisionStrategies
+// pattern so a future third mode (e.g. a per-ghost personality) is a new
+// entry here, not a rewritten conditional.
+const TARGETING_STRATEGIES = {
+  closest: (dist, bestDist) => dist < bestDist,
+  farthest: (dist, bestDist) => dist > bestDist,
+};
+
 // Picks the best open neighboring direction by straight-line distance to
 // `target` ({col, row}). `preference` "closest" is chase/scatter (both
 // are just "seek this target," they only differ in what the target is);
@@ -9,6 +18,9 @@ const REVERSE = { up: "down", down: "up", left: "right", right: "left" };
 // open option (a dead end) — reversing whenever convenient reads as
 // jittery, not as a pursuit.
 export function chooseDirection(col, row, currentDirection, target, isBlocked, preference = "closest") {
+  const isBetter = TARGETING_STRATEGIES[preference];
+  if (!isBetter) throw new Error(`Unknown targeting preference "${preference}"`);
+
   const open = (dir) => {
     const { dx, dy } = DIRECTIONS[dir];
     return !isBlocked(col + dx, row + dy);
@@ -30,8 +42,7 @@ export function chooseDirection(col, row, currentDirection, target, isBlocked, p
   let bestDist = distanceFor(best);
   for (const dir of candidates.slice(1)) {
     const dist = distanceFor(dir);
-    const better = preference === "closest" ? dist < bestDist : dist > bestDist;
-    if (better) {
+    if (isBetter(dist, bestDist)) {
       best = dir;
       bestDist = dist;
     }

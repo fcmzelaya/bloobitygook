@@ -12,21 +12,3 @@ export function addDevScriptToRootPackageJson(pkgJsonText, id) {
   pkg.scripts[`dev:${id}`] = `pnpm --filter @bloobitygook/${id} dev`;
   return JSON.stringify(pkg, null, 2) + "\n";
 }
-
-// Inserts a new ["<id>", "<id>"] entry into compose-site.mjs's APPS array,
-// right before its closing bracket. Throws rather than silently no-op-ing
-// if the anchors it expects aren't found — a script this file rewrites
-// having drifted out from under it should fail loudly, not corrupt it.
-export function addAppToComposeScript(source, id) {
-  const arrayStart = source.indexOf("const APPS = [");
-  if (arrayStart === -1) {
-    throw new Error("Couldn't find \"const APPS = [\" in compose-site.mjs");
-  }
-  const closeAnchor = "\n];";
-  const closeIndex = source.indexOf(closeAnchor, arrayStart);
-  if (closeIndex === -1) {
-    throw new Error("Couldn't find the end of the APPS array in compose-site.mjs");
-  }
-  const insertion = `\n  ["${id}", "${id}"],`;
-  return source.slice(0, closeIndex) + insertion + source.slice(closeIndex);
-}

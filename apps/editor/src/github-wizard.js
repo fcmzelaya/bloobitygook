@@ -1,11 +1,19 @@
 import { Octokit } from "@octokit/rest";
 import { generateTemplateFiles } from "./scaffold/template.js";
 import { generateTetrisTemplateFiles } from "./scaffold/tetris-template.js";
-import { addDevScriptToRootPackageJson, addAppToComposeScript } from "./scaffold/repo-edits.js";
+import { addDevScriptToRootPackageJson } from "./scaffold/repo-edits.js";
 
 const OWNER = "fcmzelaya";
 const REPO = "bloobitygook";
 const BASE_BRANCH = "main";
+
+// Which scaffold a "Game type" selection generates is a name-keyed
+// registry, not an inline branch — a new game type (e.g. the roadmap's
+// platformer) is a new entry here, not a rewritten conditional.
+const GAME_TYPE_GENERATORS = {
+  blank: ({ id, title, port }) => generateTemplateFiles({ id, title, port }),
+  tetris: ({ id, title, port, tetrisConfig }) => generateTetrisTemplateFiles({ id, title, port, ...tetrisConfig }),
+};
 
 export function createGithubClient(token) {
   return new Octokit({ auth: token });
@@ -25,24 +33,20 @@ export async function createGamePR(octokit, { id, title, description, port, game
     sha: baseRef.object.sha,
   });
 
-  const files =
-    gameType === "tetris"
-      ? generateTetrisTemplateFiles({ id, title, port, ...tetrisConfig })
-      : generateTemplateFiles({ id, title, port });
+  const generate = GAME_TYPE_GENERATORS[gameType];
+  if (!generate) throw new Error(`Unknown game type "${gameType}"`);
+  const files = generate({ id, title, port, tetrisConfig });
   // GitHub's contents API requires the existing file's blob sha when
   // *updating* a file that's already on the branch (unlike creating a new
   // one, which needs none) — omitting it 422s with "sha wasn't supplied".
-  // Only the two patched shared files need one; the four freshly
-  // generated apps/<id>/* files are brand new.
+  // Only the one patched shared file needs one; every apps/<id>/* file
+  // (including its own package.json, which declares its composed-site
+  // route — see scripts/compose-site.mjs) is brand new.
   const shas = {};
 
   const rootPackageJson = await getFileContent(octokit, "package.json", branch);
   files["package.json"] = addDevScriptToRootPackageJson(rootPackageJson.content, id);
   shas["package.json"] = rootPackageJson.sha;
-
-  const composeScript = await getFileContent(octokit, "scripts/compose-site.mjs", branch);
-  files["scripts/compose-site.mjs"] = addAppToComposeScript(composeScript.content, id);
-  shas["scripts/compose-site.mjs"] = composeScript.sha;
 
   for (const [path, content] of Object.entries(files)) {
     await octokit.repos.createOrUpdateFileContents({

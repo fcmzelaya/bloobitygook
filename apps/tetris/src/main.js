@@ -14,23 +14,25 @@ import {
 } from "@bloobitygook/grid";
 import { createTieredGoalTrigger, runTriggers } from "@bloobitygook/triggers";
 import { runStage, createActionDispatcher } from "@bloobitygook/stage";
-import { PIECE_COLORS, PIECE_TYPES, cellsForRotation, spawnPiece } from "@bloobitygook/tetris-pieces";
+import { PIECE_COLORS, cellsForRotation, spawnPiece } from "@bloobitygook/tetris-pieces";
+import config from "./config.json";
 
 // This is "the Tetris stage assembly" — every rule it applies (collision,
 // spawning, gravity, tiered goal detection, transform-attempt-and-reject)
-// is a generic capability from @bloobitygook/grid/triggers/stage. Nothing
-// below is owned game-rule logic; it's board size, piece set, drop
-// direction, and scoring, wired together into one running instance.
-const BOUNDS = { cols: 10, rows: 20 };
-const CELL_SIZE = 24;
-const SPAWN_ORIGIN = { col: 4, row: -1 };
-const DROP_DIRECTION = { dcol: 0, drow: 1 }; // "gravity" for this stage — a different stage could configure any direction
-const TIER_SCORES = { single: 100, double: 300, triple: 500, tetris: 800 };
-const BASE_DROP_INTERVAL_MS = 700;
-const LINES_PER_LEVEL = 10;
-const DROP_INTERVAL_DECAY_FACTOR = 0.85; // each level, the drop interval shrinks by this factor
-const MIN_DROP_INTERVAL_MS = 100; // floor, so speed-up can't reach 0/negative
-const NEXT_PREVIEW_CELL_SIZE = 20;
+// is a generic capability from @bloobitygook/grid/triggers/stage. Board
+// size, piece set, drop direction, and scoring live in config.json, not as
+// constants in this file, so they're hand-editable without touching logic.
+const BOUNDS = config.bounds;
+const CELL_SIZE = config.cellSize;
+const SPAWN_ORIGIN = config.spawnOrigin;
+const DROP_DIRECTION = config.dropDirection; // "gravity" for this stage — a different stage could configure any direction
+const PIECE_SET = config.pieceSet;
+const TIER_SCORES = config.tierScores;
+const BASE_DROP_INTERVAL_MS = config.baseDropIntervalMs;
+const LINES_PER_LEVEL = config.linesPerLevel;
+const DROP_INTERVAL_DECAY_FACTOR = config.dropIntervalDecayFactor; // each level, the drop interval shrinks by this factor
+const MIN_DROP_INTERVAL_MS = config.minDropIntervalMs; // floor, so speed-up can't reach 0/negative
+const NEXT_PREVIEW_CELL_SIZE = config.nextPreviewCellSize;
 
 const worldEl = document.getElementById("world");
 const scoreEl = document.getElementById("score");
@@ -89,7 +91,7 @@ function resetGame() {
   gameOver = false;
   dropTimer = 0;
   dropIntervalMs = currentDropInterval();
-  spawner = createSpawner({ candidates: PIECE_TYPES });
+  spawner = createSpawner({ candidates: PIECE_SET });
 
   lineClearTrigger = createTieredGoalTrigger({
     condition: () => checkCompleteRows(occupied, BOUNDS),

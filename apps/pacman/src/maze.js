@@ -1,21 +1,22 @@
-// Hand-authored and hand-verified connected (no isolated pockets a pellet
-// could get stranded in) — see docs/games-roadmap.md for the walkthrough.
-// '#' wall, '.' pellet, 'o' power pellet. Row 4 has no boundary walls on
-// purpose: it's the tunnel row, the only place col can legally go out of
-// [0, COLS) — see isWallAt.
-export const MAZE_ROWS = [
-  "###########",
-  "#o...#...o#",
-  "#.##.#.##.#",
-  "#.#.....#.#",
-  "...........",
-  "#.#.....#.#",
-  "#.##.#.##.#",
-  "#o...#...o#",
-  "###########",
-];
+// Mazes ship baked into the build (no runtime fetch) — drop a new JSON
+// file in ../mazes/ and it's available automatically, no import list to
+// maintain (mirrors apps/play/src/scenes.js's exact pattern). Each maze
+// is hand-authored and hand-verified connected (no isolated pockets a
+// pellet could get stranded in) — see docs/games-roadmap.md for the
+// walkthrough. '#' wall, '.' pellet, 'o' power pellet. `tunnelRow` is the
+// one row with no boundary walls on purpose: the only place col can
+// legally go outside [0, COLS) — see isWallAt.
+const modules = import.meta.glob("../mazes/*.json", { eager: true });
 
-export const TUNNEL_ROW = 4;
+export const mazes = Object.entries(modules).map(([path, mod]) => ({
+  id: path.split("/").pop().replace(".json", ""),
+  data: mod.default,
+}));
+
+const activeMaze = mazes[0].data;
+
+export const MAZE_ROWS = activeMaze.rows;
+export const TUNNEL_ROW = activeMaze.tunnelRow;
 export const ROWS = MAZE_ROWS.length;
 export const COLS = MAZE_ROWS[0].length;
 

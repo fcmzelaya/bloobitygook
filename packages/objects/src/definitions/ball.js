@@ -5,6 +5,9 @@ import { spawnBall, serializeBall, randomBallColor } from "@bloobitygook/engine/
 // reproduces exactly the randomization the editor used to inline in its
 // click handler — moving it here means engine.js no longer needs to know
 // "ball" is special.
+// Also exported as default so packages/objects/src/standard.js can
+// discover this file via import.meta.glob without a hand-maintained
+// import list — see that file's comment.
 export const ballDefinition = {
   id: "ball",
   category: "physics",
@@ -24,3 +27,5 @@ export const ballDefinition = {
     };
   },
 };
+
+export default ballDefinition;

@@ -25,6 +25,10 @@ export function generateTemplateFiles({ id, title, port }) {
           devDependencies: {
             vite: "^6.0.0",
           },
+          // Declares this app's own route in the composed public site
+          // (scripts/compose-site.mjs discovers it from here — no central
+          // list to edit for a new game app).
+          bloobitygook: { route: id },
         },
         null,
         2

@@ -1,0 +1,13 @@
+{
+  "bounds": { "cols": 10, "rows": 20 },
+  "cellSize": 24,
+  "spawnOrigin": { "col": 4, "row": -1 },
+  "dropDirection": { "dcol": 0, "drow": 1 },
+  "pieceSet": ["o", "j", "l", "i", "t", "z", "s"],
+  "tierScores": { "single": 100, "double": 300, "triple": 500, "tetris": 800 },
+  "baseDropIntervalMs": 700,
+  "linesPerLevel": 10,
+  "dropIntervalDecayFactor": 0.85,
+  "minDropIntervalMs": 100,
+  "nextPreviewCellSize": 20
+}

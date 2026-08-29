@@ -5,11 +5,15 @@
 // (@bloobitygook/grid's collision/spawner/gravity, @bloobitygook/triggers'
 // tiered goal detection, @bloobitygook/stage's orchestration) is generic
 // and reusable — nothing generated here is Tetris-owned logic beyond the
-// piece-shape data in @bloobitygook/tetris-pieces and this file's own
-// board/scoring constants, mirroring apps/tetris/src/main.js's assembly
-// shape exactly (see the comment there for why this isn't shared via a
-// runtime function call: the wizard already bakes config as literal
-// generated code everywhere else, e.g. port/id into vite.config.js).
+// piece-shape data in @bloobitygook/tetris-pieces, mirroring
+// apps/tetris/src/main.js's assembly shape exactly (see the comment there
+// for why this isn't shared via a runtime function call: the wizard
+// already bakes app-identity values like port/id as literal generated
+// code, e.g. into vite.config.js). Board/scoring/pacing values themselves
+// are NOT baked into generated source, unlike port/id/route — they're
+// game tuning, not app identity, so they land in a generated config.json
+// the new app's main.js imports, hand-editable after scaffolding without
+// touching its logic (matching apps/tetris/src/config.json's own shape).
 export function generateTetrisTemplateFiles({
   id,
   title,
@@ -54,6 +58,10 @@ export function generateTetrisTemplateFiles({
             vite: "^6.0.0",
             vitest: "^3.0.0",
           },
+          // Declares this app's own route in the composed public site
+          // (scripts/compose-site.mjs discovers it from here — no central
+          // list to edit for a new game app).
+          bloobitygook: { route: id },
         },
         null,
         2
@@ -181,6 +189,25 @@ export default defineConfig(({ command }) => ({
 </html>
 `,
 
+    [`${base}/src/config.json`]:
+      JSON.stringify(
+        {
+          bounds: { cols, rows },
+          cellSize,
+          spawnOrigin: { col: spawnCol, row: -1 },
+          dropDirection: { dcol: 0, drow: 1 },
+          pieceSet,
+          tierScores: { single: 100, double: 300, triple: 500, tetris: 800 },
+          baseDropIntervalMs: dropIntervalMs,
+          linesPerLevel,
+          dropIntervalDecayFactor,
+          minDropIntervalMs: 100,
+          nextPreviewCellSize,
+        },
+        null,
+        2
+      ) + "\n",
+
     [`${base}/src/main.js`]: `import { createWorld, query, destroy, clearChildren, createSvgElement, startLoop } from "@bloobitygook/engine/core";
 import {
   canPlace,
@@ -198,21 +225,21 @@ import {
 import { createTieredGoalTrigger, runTriggers } from "@bloobitygook/triggers";
 import { runStage, createActionDispatcher } from "@bloobitygook/stage";
 import { PIECE_COLORS, cellsForRotation, spawnPiece } from "@bloobitygook/tetris-pieces";
+import config from "./config.json";
 
-// Config baked in at scaffold time by the wizard — literal values, not a
-// runtime-editable file, matching how port/id are already baked into
-// vite.config.js above rather than left configurable post-generation.
-const BOUNDS = { cols: ${cols}, rows: ${rows} };
-const CELL_SIZE = ${cellSize};
-const SPAWN_ORIGIN = { col: ${spawnCol}, row: -1 };
-const DROP_DIRECTION = { dcol: 0, drow: 1 };
-const PIECE_SET = ${JSON.stringify(pieceSet)};
-const TIER_SCORES = { single: 100, double: 300, triple: 500, tetris: 800 };
-const BASE_DROP_INTERVAL_MS = ${dropIntervalMs};
-const LINES_PER_LEVEL = ${linesPerLevel};
-const DROP_INTERVAL_DECAY_FACTOR = ${dropIntervalDecayFactor};
-const MIN_DROP_INTERVAL_MS = 100;
-const NEXT_PREVIEW_CELL_SIZE = ${nextPreviewCellSize};
+// Board/scoring/pacing values live in config.json, not as constants here
+// — hand-editable after scaffolding without touching this file's logic.
+const BOUNDS = config.bounds;
+const CELL_SIZE = config.cellSize;
+const SPAWN_ORIGIN = config.spawnOrigin;
+const DROP_DIRECTION = config.dropDirection;
+const PIECE_SET = config.pieceSet;
+const TIER_SCORES = config.tierScores;
+const BASE_DROP_INTERVAL_MS = config.baseDropIntervalMs;
+const LINES_PER_LEVEL = config.linesPerLevel;
+const DROP_INTERVAL_DECAY_FACTOR = config.dropIntervalDecayFactor;
+const MIN_DROP_INTERVAL_MS = config.minDropIntervalMs;
+const NEXT_PREVIEW_CELL_SIZE = config.nextPreviewCellSize;
 
 const worldEl = document.getElementById("world");
 const scoreEl = document.getElementById("score");
