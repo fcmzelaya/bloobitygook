@@ -40,12 +40,21 @@ export function collisionSystem(world, bounds) {
     const restitution = e.restitution ?? 0.7;
     const friction = e.friction ?? 0.2;
 
+    // Reset every tick and re-set on floor contact below — a generic
+    // "touching the floor this frame" fact, harmless for any consumer
+    // that doesn't read it (e.g. the blob demo's balls), and what a
+    // platformer character's jump logic (packages/platformer) needs to
+    // gate on. True on any floor contact, including mid-bounce with
+    // restitution > 0 — a deliberate choice, not an oversight.
+    e.grounded = false;
+
     if (e.y + e.radius > bounds.floorY) {
       e.y = bounds.floorY - e.radius;
       const impact = Math.abs(e.vy);
       e.vy = -e.vy * restitution;
       e.vx *= 1 - friction;
       applyImpact(e, impact, "y");
+      e.grounded = true;
     }
 
     if (e.x - e.radius < bounds.left) {

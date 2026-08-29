@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>bloobitygook — goop</title>
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: #10131a;
+      overflow: hidden;
+      font-family: system-ui, sans-serif;
+      color: #dfe4ee;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #layout {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+    }
+    #stage {
+      display: block;
+      border: 1px solid #3a4152;
+      border-radius: 4px;
+    }
+    #status {
+      font-size: 13px;
+      color: #8b93a7;
+    }
+  </style>
+</head>
+<body>
+  <div id="layout">
+    <svg id="stage" viewBox="0 0 800 600" width="800" height="600">
+      <rect x="0" y="0" width="800" height="600" fill="#1a1f2b" />
+      <rect id="floor" x="0" y="560" width="800" height="40" fill="#232a39" />
+      <g id="world"></g>
+    </svg>
+    <div id="status">&larr;/&rarr; move, space to jump</div>
+  </div>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

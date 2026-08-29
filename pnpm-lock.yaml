@@ -58,6 +58,25 @@ importers:
         specifier: ^6.0.0
         version: 6.4.3(@types/node@26.2.0)
 
+  apps/goop:
+    dependencies:
+      '@bloobitygook/animation':
+        specifier: workspace:*
+        version: link:../../packages/animation
+      '@bloobitygook/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
+      '@bloobitygook/objects':
+        specifier: workspace:*
+        version: link:../../packages/objects
+      '@bloobitygook/platformer':
+        specifier: workspace:*
+        version: link:../../packages/platformer
+    devDependencies:
+      vite:
+        specifier: ^6.0.0
+        version: 6.4.3(@types/node@26.2.0)
+
   apps/hub:
     dependencies:
       '@bloobitygook/game-manifest':
@@ -187,6 +206,9 @@ importers:
 
   packages/objects:
     dependencies:
+      '@bloobitygook/animation':
+        specifier: workspace:*
+        version: link:../animation
       '@bloobitygook/engine':
         specifier: workspace:*
         version: link:../engine
@@ -200,6 +222,12 @@ importers:
       jsdom:
         specifier: ^27.0.1
         version: 27.4.0
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@26.2.0)(jsdom@27.4.0)
+
+  packages/platformer:
+    devDependencies:
       vitest:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@26.2.0)(jsdom@27.4.0)

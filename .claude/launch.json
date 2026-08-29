@@ -30,6 +30,12 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "@bloobitygook/pacman", "dev"],
       "port": 5182
+    },
+    {
+      "name": "goop",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@bloobitygook/goop", "dev"],
+      "port": 5185
     }
   ]
 }

@@ -61,6 +61,26 @@ describe("collisionSystem", () => {
     expect(e.vx).toBe(10);
     expect(e.vy).toBe(10);
   });
+
+  it("marks an entity grounded when it resolves floor contact this tick", () => {
+    const world = createWorld();
+    const e = spawn(world, {
+      dynamic: true, x: 400, y: 555, vx: 0, vy: 100,
+      radius: 10, restitution: 0.5, friction: 0.2,
+    });
+    collisionSystem(world, { floorY: 560, left: 0, right: 800 });
+    expect(e.grounded).toBe(true);
+  });
+
+  it("clears grounded on a tick where the entity no longer touches the floor", () => {
+    const world = createWorld();
+    const e = spawn(world, {
+      dynamic: true, x: 400, y: 300, vx: 0, vy: 0,
+      radius: 10, restitution: 0.5, friction: 0.2, grounded: true,
+    });
+    collisionSystem(world, { floorY: 560, left: 0, right: 800 });
+    expect(e.grounded).toBe(false);
+  });
 });
 
 describe("ballCollisionSystem", () => {

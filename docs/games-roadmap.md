@@ -39,6 +39,9 @@ This doc assumes the three games get built **inside bloobitygook**, as new apps 
 ### For the platformer (adds on top of both prior)
 
 A generic capability demo, not a specific-IP clone — no fixed level layouts or named enemies to build toward, just the motor/hazard/goal mechanics below, exercised well enough to prove the capability. Simplifies scope and sidesteps cloning someone else's specific game design.
+
+**Pivoted from the plan below**: the platformer's first real game turned out to be "blob goop" — characters riding the *existing* continuous blob physics (bouncy/squishy, restitution-based), not the discrete/kinematic model item #12 originally assumed. `packages/platformer` exists (built for this), but as continuous-physics move/jump helpers (`applyMoveInput`/`applyJump`, gating jump on a `grounded` flag `packages/engine`'s `collisionSystem` now stamps) layered on `packages/engine`'s existing systems — not on `packages/grid`'s direction-configurable gravity as planned here. Ladders/one-way/moving platforms (the rest of item #12) are unbuilt, deferred to the stage-building phase; `apps/goop` proves only the character half (physics + animation + an open per-character stat bag) so far. See `CLAUDE.md`'s `packages/platformer`/`apps/goop` sections for the current shape.
+
 12. **Platformer motor** — gravity + jump impulse + ground detection, ladders (vertical move, gravity suspended while climbing), one-way platforms, moving platforms that carry whatever's standing on them.
 13. **Hazard/enemy behavior** — rolling barrels etc., reusing the behavior system from #11 with a new "patrol/roll downhill" rule.
 14. **Goal/level-complete trigger** — reuses the trigger system from #10.
@@ -86,7 +89,7 @@ packages/
   behavior/      ✅ v1 — generic state machine + seek/flee movement primitives
   stage/         ✅ (Phase 8) tiny, dependency-free orchestration (runStage/dispatch) composing whichever systems/controls a stage config lists
   tetris-pieces/ ✅ (Phase 8) the one genuinely Tetris-specific package — pure piece shape/color/rotation data, no game-rule logic
-  platformer/    (new, for the final game — gravity/jump/ladders/moving platforms; will want packages/grid's direction-configurable gravity)
+  platformer/    🟡 started — continuous-physics move/jump helpers (applyMoveInput/applyJump) on top of packages/engine's existing systems, not packages/grid's kinematic gravity as originally planned here (see the pivot note above); ladders/one-way/moving platforms still unbuilt
   game-manifest/ ✅ shared shape/helpers for games/<id>/manifest.json, used by hub + editor + wizard
 
 apps/
@@ -94,7 +97,7 @@ apps/
   hub               ✅ public games list, reads the manifest
   tetris            ✅ playable — a "stage assembly" (Phase 8) wiring packages/grid+triggers+stage+tetris-pieces together, not owned game-rule logic
   pacman            ✅ playable
-  platformer        (new)
+  goop              🟡 started — proof of the character system only (one hand-placed "blob" character, physics+animation+stats, no stage/goals yet); not part of the composed site yet
 
 functions/         ✅ (Phase 7) one Storage-triggered Cloud Function (rebuildGamesIndex), outside the pnpm workspace — Firebase manages its own npm install here
 ```
@@ -117,8 +120,10 @@ functions/         ✅ (Phase 7) one Storage-triggered Cloud Function (rebuildGa
    - **Portal wraparound validated against the real maze + trigger code together**, not just in isolation: walked a player entity off the left edge of the tunnel row through real `tryMove` ticks with the real portal triggers running each tick, confirmed it lands on the opposite side at the correct column.
    - **Scope trims, stated plainly**: "chomp" animation is a radius pulse (frame-attribute swap), not literal mouth-shape path-arc math — proves the animation mechanism without extra geometry work that's polish, not capability. "Scatter" (a third classic ghost state) isn't wired to anything — chase and flee are enough to prove the state-machine + targeting-preference pattern; scatter would just be chase-with-a-different-target, no new mechanism needed if it's ever added.
    - 131 tests passing workspace-wide (up from 104), including a real algorithmic bug caught before it ever reached the browser.
-6. **Phase 5 — Platformer foundations**: `packages/platformer`, extend `packages/behavior` for enemies/hazards.
-7. **Phase 6 — Build the platformer** on everything prior, third wizard template.
+6. **Phase 5 — Platformer foundations** 🟡 partial, pivoted: `packages/platformer` built, but as continuous-physics move/jump helpers on `packages/engine`'s existing systems rather than `packages/grid`'s kinematic gravity (see the pivot note under "For the platformer" above). `packages/behavior` not yet extended for enemies/hazards — no enemies exist yet.
+   - **Character system**: `packages/objects` gained a `"character"` category (`definitions/character.js`) — physics (reusing the ball-entity shape), a name-keyed `animations` map (one `idle` entry so far — forward-compatible shape, no switching logic built since there's nothing to switch between yet), and an open, unschema'd `stats` bag (`moveSpeed`, `jumpImpulse`, whatever a game needs). `packages/engine`'s `collisionSystem` gained a `grounded` flag (set on floor contact, inert for any entity that doesn't read it) for `packages/platformer`'s jump to gate on.
+   - `apps/goop` — the first consumer: one hand-placed `"blob"` character, keyboard left/right/jump, live-verified (gravity/fall, floor landing + squash-deformation, movement, jump correctly rejected mid-air and correctly launching at `-jumpImpulse` when grounded). No stage (platforms/hazards/goals) yet — that's the explicitly deferred next phase — and no editor authoring (Palette/Inspector) for characters yet.
+7. **Phase 6 — Build the platformer**: stage-building (platforms, one-way platforms, moving platforms, hazards, configurable goals) on top of Phase 5's character system, then a wizard template once the shape proves out — not started.
 8. **Phase 7 — Platform hardening** ✅ No new game, no new engine capability — pays down three structural-debt edges that made the *next* game/PR more expensive than it should be, per the roadmap's own "prefer making the next game easier to create" framing. Three independent pieces:
    - **`packages/engine` split into `/core` and `/physics` subpath exports** (`"./core"` = world/svg/loop ECS primitives; `"./physics"` = the blob-only systems, scene/fileio/color/ball). The "Tetris/Pac-Man never touch physics.js" boundary — previously enforced only by tree-shaking plus each app's `vite.config.js` `optimizeDeps.exclude` list — is now an actual package contract: the bare `"."` export is gone, every importer picks a subpath explicitly. Verified via the full workspace test suite (146 tests, zero changes needed to `packages/engine/test/*` despite the underlying file rename) plus a live dev-server + composed-production-build pass across all four gameplay routes.
    - **CI/CD discovers apps dynamically**: `.github/workflows/ci.yml`/`deploy.yml` and root `package.json`'s own `build` script replaced their hardcoded per-app `pnpm --filter @bloobitygook/<app> build` lines with `pnpm --filter "./apps/*" -r run build`. A wizard-scaffolded game's PR no longer needs a hand-edited workflow file — `github-wizard.js`'s PR body dropped that checklist item, and `scaffold/repo-edits.js` no longer patches the root build script (only `dev:<id>` and `compose-site.mjs`'s `APPS` entry, which still needs its route registered by hand since CI dynamism doesn't know route prefixes).

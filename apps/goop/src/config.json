@@ -1,0 +1,18 @@
+{
+  "board": { "width": 800, "height": 600 },
+  "bounds": { "floorY": 560, "left": 0, "right": 800 },
+  "gravity": { "mode": "uniform", "magnitude": 900 },
+  "spawnDef": {
+    "x": 400,
+    "y": 300,
+    "radius": 24,
+    "color": "#7ee08a",
+    "restitution": 0.35,
+    "friction": 0.25,
+    "animations": {
+      "idle": { "frames": [{ "r": 24 }, { "r": 21 }], "fps": 2 }
+    },
+    "animation": "idle",
+    "stats": { "moveSpeed": 220, "jumpImpulse": 480 }
+  }
+}
