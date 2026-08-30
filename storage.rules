@@ -33,6 +33,14 @@ service firebase.storage {
       allow write: if isCanEdit();
     }
 
+    // Archetypes (object prototypes authored in the editor's no-code
+    // archetype UI) are shared building blocks, same tier as scenes —
+    // public read so any game can load one it references, canEdit write.
+    match /archetypes/{archetypeId} {
+      allow read: if true;
+      allow write: if isCanEdit();
+    }
+
     // Draft game manifests — canEdit's working area. apps/hub never reads
     // this prefix, so nothing here is ever publicly visible regardless of
     // what a draft's `published` field says.

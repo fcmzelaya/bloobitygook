@@ -12,8 +12,10 @@
   },
   "dependencies": {
     "@bloobitygook/animation": "workspace:*",
+    "@bloobitygook/behavior": "workspace:*",
     "@bloobitygook/engine": "workspace:*",
     "@bloobitygook/grid": "workspace:*",
+    "@bloobitygook/svg-import": "workspace:*",
     "@bloobitygook/tetris-pieces": "workspace:*"
   },
   "devDependencies": {

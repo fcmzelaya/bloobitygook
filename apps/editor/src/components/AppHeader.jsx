@@ -25,6 +25,9 @@ export function AppHeader({ onOpenWizard }) {
       )}
       <span id="status">{snap.status}</span>
       <div id="app-header-actions">
+        <Link id="archetypes-link" to="/archetypes" title="Manage reusable object prototypes">
+          Archetypes
+        </Link>
         <button
           id="wizard-btn"
           onClick={onOpenWizard}

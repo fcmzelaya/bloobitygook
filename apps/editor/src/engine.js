@@ -15,9 +15,19 @@ import {
   saveScene,
   openScene,
 } from "@bloobitygook/engine/physics";
-import { STANDARD_CATALOG, catalogIdsOf, instantiateObject, serializeScene, loadScene } from "@bloobitygook/objects";
+import {
+  STANDARD_CATALOG,
+  STANDARD_DEFINITIONS,
+  createCatalog,
+  catalogIdsOf,
+  instantiateObject,
+  serializeScene,
+  loadScene,
+  archetypeToDefinition,
+} from "@bloobitygook/objects";
 import { findEntityAt, isGravityMarkerVisible, isPlaceGravityButtonEnabled, statusText } from "./ui-helpers.js";
 import { isCloudEnabled, publishScene, fetchPublishedScene } from "./publish.js";
+import { fetchArchetype } from "./archetypes.js";
 
 const BOUNDS = { floorY: 560, left: 0, right: 800 };
 const world = createWorld();
@@ -230,7 +240,7 @@ export async function openSceneFromFile() {
   try {
     const { data, handle } = await openScene();
     fileHandle = handle;
-    applyLoadedScene(data);
+    await applyLoadedScene(data);
     status = "Scene loaded";
   } catch (err) {
     if (err.name !== "AbortError") status = `Open failed: ${err.message}`;
@@ -251,7 +261,7 @@ export async function publishCurrentScene(sceneId) {
 export async function loadSceneFromCloud(sceneId) {
   try {
     const data = await fetchPublishedScene(sceneId);
-    applyLoadedScene(data);
+    await applyLoadedScene(data);
     status = `Loaded "${sceneId}" from cloud`;
   } catch (err) {
     status = `Cloud load failed: ${err.message}`;
@@ -264,8 +274,21 @@ export async function loadSceneFromCloud(sceneId) {
 // one has to rebuild the catalog from the loaded file's own catalogIds,
 // not just re-run loadScene against whatever catalog happened to be
 // active before, since a loaded file can enable a different object set.
-function applyLoadedScene(data) {
-  catalog = STANDARD_CATALOG.enabledIn(catalogIdsOf(data));
+//
+// An id the built-in STANDARD_CATALOG doesn't recognize is fetched as a
+// user-authored archetype (see archetypes.js) and adapted into an
+// ordinary definition — async, since that's a Storage round trip. A
+// missing/offline archetype is simply left out rather than failing the
+// whole load: loadScene's own "unknown type — skipped" warning already
+// handles a scene referencing a type the active catalog doesn't have.
+async function applyLoadedScene(data) {
+  const ids = catalogIdsOf(data);
+  const unknownIds = ids.filter((id) => !STANDARD_CATALOG.byId(id));
+  const fetchedArchetypes =
+    isCloudEnabled && unknownIds.length > 0 ? await Promise.all(unknownIds.map((id) => fetchArchetype(id))) : [];
+  const archetypeDefinitions = fetchedArchetypes.filter(Boolean).map(archetypeToDefinition);
+
+  catalog = createCatalog([...STANDARD_DEFINITIONS, ...archetypeDefinitions]).enabledIn(ids);
   armedId = catalog.all()[0]?.id ?? null;
   gravity = loadScene(world, worldEl, data, catalog);
   clearSelectionInternal();
@@ -325,7 +348,7 @@ export async function initEngine({ stageEl: stage, worldEl: worldGroup, gravityM
   gravityMarkerEl = marker;
 
   const data = await loadSceneData(sceneId);
-  applyLoadedScene(data);
+  await applyLoadedScene(data);
   mode = "setup";
   status = statusText(mode);
   notify();

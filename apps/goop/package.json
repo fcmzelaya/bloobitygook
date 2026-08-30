@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@bloobitygook/animation": "workspace:*",
+    "@bloobitygook/behavior": "workspace:*",
     "@bloobitygook/engine": "workspace:*",
     "@bloobitygook/objects": "workspace:*",
     "@bloobitygook/platformer": "workspace:*"

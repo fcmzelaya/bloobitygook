@@ -13,6 +13,8 @@
     "@bloobitygook/engine": "workspace:*",
     "@bloobitygook/game-manifest": "workspace:*",
     "@bloobitygook/objects": "workspace:*",
+    "@bloobitygook/platformer": "workspace:*",
+    "@bloobitygook/svg-import": "workspace:*",
     "@bloobitygook/tetris-pieces": "workspace:*",
     "@octokit/rest": "^21.0.0",
     "firebase": "^11.0.0",

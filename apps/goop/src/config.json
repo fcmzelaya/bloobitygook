@@ -2,17 +2,42 @@
   "board": { "width": 800, "height": 600 },
   "bounds": { "floorY": 560, "left": 0, "right": 800 },
   "gravity": { "mode": "uniform", "magnitude": 900 },
-  "spawnDef": {
-    "x": 400,
-    "y": 300,
-    "radius": 24,
-    "color": "#7ee08a",
-    "restitution": 0.35,
-    "friction": 0.25,
-    "animations": {
-      "idle": { "frames": [{ "r": 24 }, { "r": 21 }], "fps": 2 }
+  "archetypes": [
+    {
+      "id": "goblin",
+      "label": "Goblin",
+      "category": "character",
+      "swatch": "#7ee08a",
+      "boundingRadius": 24,
+      "physics": { "restitution": 0.35, "friction": 0.25 },
+      "properties": [
+        { "name": "moveSpeed", "default": 220, "required": true },
+        { "name": "jumpImpulse", "default": 480, "required": true }
+      ],
+      "visual": { "kind": "shape", "shape": "circle", "fill": "#7ee08a" },
+      "behavior": {
+        "mode": "input",
+        "inputMap": {
+          "ArrowLeft": { "onPress": "moveLeft", "onRelease": "stopMoving" },
+          "ArrowRight": { "onPress": "moveRight", "onRelease": "stopMoving" },
+          " ": { "onPress": "jump" }
+        }
+      }
     },
-    "animation": "idle",
-    "stats": { "moveSpeed": 220, "jumpImpulse": 480 }
-  }
+    {
+      "id": "patroller",
+      "label": "Patroller",
+      "category": "character",
+      "swatch": "#ec7063",
+      "boundingRadius": 18,
+      "physics": { "restitution": 0.2, "friction": 0.3 },
+      "properties": [],
+      "visual": { "kind": "shape", "shape": "rect", "fill": "#ec7063" },
+      "behavior": { "mode": "scripted", "preset": "patrol", "range": 100, "speed": 80 }
+    }
+  ],
+  "spawns": [
+    { "archetypeId": "goblin", "x": 400, "y": 300 },
+    { "archetypeId": "patroller", "x": 200, "y": 300 }
+  ]
 }

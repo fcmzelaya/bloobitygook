@@ -1,50 +1,43 @@
 import { createWorld, startLoop } from "@bloobitygook/engine/core";
 import { gravitySystem, integrateSystem, collisionSystem, deformationSystem, renderSystem } from "@bloobitygook/engine/physics";
 import { animationSystem } from "@bloobitygook/animation";
-import { STANDARD_CATALOG, instantiateObject } from "@bloobitygook/objects";
-import { applyMoveInput, applyJump } from "@bloobitygook/platformer";
+import { behaviorSystem } from "@bloobitygook/behavior";
+import { createCatalog, archetypeToDefinition, instantiateObject } from "@bloobitygook/objects";
+import { createKeyboardController } from "@bloobitygook/platformer";
 import config from "./config.json";
 
-// Proof-of-concept for the character system (physics + animation + open
-// stat bag) — one hand-placed blob, no stage/platforms/goals yet, that's
-// deliberately deferred to a later phase. Not part of the composed site
-// (no bloobitygook.route in package.json).
-const catalog = STANDARD_CATALOG.enabledIn(["blob"]);
+// End-to-end proof of the no-code archetype system: every entity here is
+// spawned from a plain data record (config.json's `archetypes`), not a
+// hand-written spawn function — one input-driven ("goblin", keyboard) and
+// one scripted ("patroller", the "patrol" preset). This is what the
+// editor's Archetypes UI produces when signed in; this app just spawns
+// the same shape of record directly, since it isn't published anywhere
+// yet (no bloobitygook.route — a capability proof, not a game).
 const world = createWorld();
 const worldEl = document.getElementById("world");
 
-const character = instantiateObject(catalog, "blob", world, worldEl, config.spawnDef);
+const catalog = createCatalog(config.archetypes.map(archetypeToDefinition));
 
-const held = new Set();
-let direction = 0;
-
-function updateDirection() {
-  const left = held.has("ArrowLeft");
-  const right = held.has("ArrowRight");
-  direction = left === right ? 0 : left ? -1 : 1;
+let playerController = null;
+for (const { archetypeId, x, y } of config.spawns) {
+  const entity = instantiateObject(catalog, archetypeId, world, worldEl, { x, y, stats: {} });
+  if (entity.player) playerController = createKeyboardController(entity);
 }
 
 window.addEventListener("keydown", (e) => {
-  if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
-    held.add(e.key);
-    updateDirection();
-    e.preventDefault();
-  } else if (e.key === " " && !e.repeat) {
-    applyJump(character, character.stats.jumpImpulse);
-    e.preventDefault();
-  }
+  if (!playerController) return;
+  if (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === " ") e.preventDefault();
+  playerController.handleKeyDown(e.key);
 });
 
 window.addEventListener("keyup", (e) => {
-  if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
-    held.delete(e.key);
-    updateDirection();
-  }
+  if (!playerController) return;
+  playerController.handleKeyUp(e.key);
 });
 
 function update(dt) {
-  applyMoveInput(character, direction, character.stats.moveSpeed);
   gravitySystem(world, dt, config.gravity);
+  behaviorSystem(world, dt); // drives the patroller's "patrol" state machine
   integrateSystem(world, dt);
   collisionSystem(world, config.bounds);
   deformationSystem(world, dt);

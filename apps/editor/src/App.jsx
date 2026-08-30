@@ -4,6 +4,7 @@ import { AppHeader } from "./components/AppHeader.jsx";
 import { WizardPanel } from "./components/WizardPanel.jsx";
 import { Dashboard } from "./routes/Dashboard.jsx";
 import { GameEditorRoute } from "./routes/GameEditor.jsx";
+import { Archetypes } from "./routes/Archetypes.jsx";
 import { CloudAuthProvider } from "./CloudAuthContext.jsx";
 
 export function App() {
@@ -15,6 +16,7 @@ export function App() {
         <AppHeader onOpenWizard={() => setWizardVisible((v) => !v)} />
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/archetypes" element={<Archetypes />} />
           <Route path="/:gameId" element={<GameEditorRoute />} />
         </Routes>
         <WizardPanel visible={wizardVisible} />

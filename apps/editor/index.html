@@ -151,6 +151,166 @@
     }
     #dashboard-open-btn:hover { background: #2a3244; }
 
+    /* Archetypes (no-code object prototypes) */
+    #archetypes-link {
+      color: #dfe4ee;
+      text-decoration: none;
+      font-size: 13px;
+      padding: 5px 12px;
+      border-radius: 6px;
+      border: 1px solid #3a4152;
+      background: #1e2431;
+    }
+    #archetypes-link:hover { background: #2a3244; }
+    #archetypes {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 76px 20px 40px;
+    }
+    #archetypes h1 {
+      font-size: 20px;
+      margin: 0 0 16px;
+    }
+    #archetypes-list {
+      list-style: none;
+      margin: 0 0 16px;
+      padding: 0;
+      font-size: 14px;
+    }
+    #archetypes-list li {
+      padding: 6px 0;
+      border-bottom: 1px solid #232a39;
+    }
+    .link-btn {
+      background: none;
+      border: none;
+      color: #dfe4ee;
+      font: inherit;
+      font-weight: 600;
+      padding: 0;
+      cursor: pointer;
+    }
+    .link-btn:hover { color: #7ea8d8; }
+    #archetypes-error { color: #e0a0a0; font-size: 13px; }
+    #new-archetype-btn {
+      font: inherit;
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid #3a4152;
+      background: #1e2431;
+      color: #dfe4ee;
+      cursor: pointer;
+    }
+    #new-archetype-btn:hover { background: #2a3244; }
+
+    #archetype-editor {
+      background: #161a24;
+      border: 1px solid #2a3244;
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 13px;
+    }
+    #archetype-editor label {
+      display: block;
+      margin-top: 10px;
+      font-size: 11px;
+      color: #8b93a7;
+    }
+    #archetype-editor input[type="text"],
+    #archetype-editor input[type="number"],
+    #archetype-editor select,
+    #archetype-editor textarea {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      margin-top: 3px;
+      background: #10131a;
+      border: 1px solid #3a4152;
+      border-radius: 4px;
+      color: #dfe4ee;
+      font: inherit;
+      padding: 5px 8px;
+    }
+    #archetype-editor input:disabled { opacity: 0.5; }
+    #archetype-editor input[type="color"] { padding: 2px; height: 28px; }
+    #archetype-editor fieldset {
+      margin-top: 14px;
+      border: 1px solid #2a3244;
+      border-radius: 6px;
+      padding: 10px 12px;
+    }
+    #archetype-editor legend {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 0 4px;
+    }
+    #archetype-editor .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+      font-size: 12px;
+      color: #dfe4ee;
+    }
+    #archetype-editor .checkbox-row input { margin: 0; }
+    .property-row, .input-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .property-row input[type="text"], .input-row input[type="text"] { margin-top: 0; }
+    .property-row input[type="number"] { margin-top: 0; max-width: 90px; }
+    .property-row .checkbox-row { margin-top: 0; white-space: nowrap; }
+    .input-row select { margin-top: 0; }
+    .property-row button, .input-row button {
+      font: inherit;
+      background: #2b1e22;
+      border: 1px solid #6a3a3a;
+      color: #e0a0a0;
+      border-radius: 4px;
+      cursor: pointer;
+      padding: 4px 8px;
+    }
+    #archetype-properties > button, #archetype-input-map > button {
+      margin-top: 8px;
+      font: inherit;
+      padding: 5px 10px;
+      border-radius: 6px;
+      border: 1px solid #3a4152;
+      background: #1e2431;
+      color: #dfe4ee;
+      cursor: pointer;
+    }
+    #archetype-svg-preview {
+      margin-top: 8px;
+      width: 80px;
+      height: 80px;
+      background: #10131a;
+      border: 1px solid #3a4152;
+      border-radius: 4px;
+    }
+    #archetype-svg-preview svg { width: 100%; height: 100%; }
+    #archetype-form-error { margin-top: 10px; font-size: 12px; color: #e0a0a0; }
+    #archetype-editor .editor-hint.error { color: #e0a0a0; }
+    #archetype-editor .form-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    #archetype-editor .form-actions button {
+      flex: 1;
+      font: inherit;
+      padding: 7px;
+      border-radius: 6px;
+      border: 1px solid #3a4152;
+      background: #1e2431;
+      color: #dfe4ee;
+      cursor: pointer;
+    }
+    #archetype-editor .form-actions button:hover { background: #2a3244; }
+    #archetype-editor .form-actions button:disabled { opacity: 0.4; cursor: default; }
+
     /* Per-game editor */
     #game-editor {
       padding-top: 44px;

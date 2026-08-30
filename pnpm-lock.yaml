@@ -19,6 +19,12 @@ importers:
       '@bloobitygook/objects':
         specifier: workspace:*
         version: link:../../packages/objects
+      '@bloobitygook/platformer':
+        specifier: workspace:*
+        version: link:../../packages/platformer
+      '@bloobitygook/svg-import':
+        specifier: workspace:*
+        version: link:../../packages/svg-import
       '@bloobitygook/tetris-pieces':
         specifier: workspace:*
         version: link:../../packages/tetris-pieces
@@ -63,6 +69,9 @@ importers:
       '@bloobitygook/animation':
         specifier: workspace:*
         version: link:../../packages/animation
+      '@bloobitygook/behavior':
+        specifier: workspace:*
+        version: link:../../packages/behavior
       '@bloobitygook/engine':
         specifier: workspace:*
         version: link:../../packages/engine
@@ -209,12 +218,18 @@ importers:
       '@bloobitygook/animation':
         specifier: workspace:*
         version: link:../animation
+      '@bloobitygook/behavior':
+        specifier: workspace:*
+        version: link:../behavior
       '@bloobitygook/engine':
         specifier: workspace:*
         version: link:../engine
       '@bloobitygook/grid':
         specifier: workspace:*
         version: link:../grid
+      '@bloobitygook/svg-import':
+        specifier: workspace:*
+        version: link:../svg-import
       '@bloobitygook/tetris-pieces':
         specifier: workspace:*
         version: link:../tetris-pieces
@@ -234,6 +249,19 @@ importers:
 
   packages/stage:
     devDependencies:
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@26.2.0)(jsdom@27.4.0)
+
+  packages/svg-import:
+    dependencies:
+      dompurify:
+        specifier: ^3.0.0
+        version: 3.4.14
+    devDependencies:
+      jsdom:
+        specifier: ^27.0.1
+        version: 27.4.0
       vitest:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@26.2.0)(jsdom@27.4.0)
@@ -1050,6 +1078,9 @@ packages:
   '@types/node@26.2.0':
     resolution: {integrity: sha512-5IviulTZeRNp2vAJ514cc/HUlY5nZ9fCbq9DMyC52BrhFZACo3nI0R7qBxhQmo/d27NFe96ur/b7Wwxklda+kg==}
 
+  '@types/trusted-types@2.0.7':
+    resolution: {integrity: sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==}
+
   '@vitejs/plugin-react@4.7.0':
     resolution: {integrity: sha512-gUu9hwfWvvEDBBmgtAowQCojwZmJ5mcLn3aufeCsitijs3+f2NsrPtlAWIR6OPiqljl96GVCUbLe0HyqIpVaoA==}
     engines: {node: ^14.18.0 || >=16.0.0}
@@ -1176,6 +1207,9 @@ packages:
   deep-eql@5.0.2:
     resolution: {integrity: sha512-h5k/5U50IJJFpzfL6nO9jaaumfjO/f2NjK/oYB2Djzm4p9L+3T9qWpZqZ2hAbLPuuYq9wrU08WQyBTL5GbPk5Q==}
     engines: {node: '>=6'}
+
+  dompurify@3.4.14:
+    resolution: {integrity: sha512-dVoH9z+MY+C9IilgGCk3YfFqjLi3fChm2OiKJMzh6axrJ5qwxqWaZamgmHrpv22CN/KdbZJuGEGgfQoL00LTdg==}
 
   electron-to-chromium@1.5.408:
     resolution: {integrity: sha512-SLoprcYpJ/OH2v2ps0+N5biv9H4/KBT3+YmmDew64TwK5y9j2wv7pMOFY7IorVkyMtEyLSCRlXKLsNlakeAlPw==}
@@ -2416,6 +2450,9 @@ snapshots:
     dependencies:
       undici-types: 8.3.0
 
+  '@types/trusted-types@2.0.7':
+    optional: true
+
   '@vitejs/plugin-react@4.7.0(vite@6.4.3(@types/node@26.2.0))':
     dependencies:
       '@babel/core': 7.29.7
@@ -2550,6 +2587,10 @@ snapshots:
   decimal.js@10.6.0: {}
 
   deep-eql@5.0.2: {}
+
+  dompurify@3.4.14:
+    optionalDependencies:
+      '@types/trusted-types': 2.0.7
 
   electron-to-chromium@1.5.408: {}
 
