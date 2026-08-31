@@ -3,7 +3,7 @@
 // React's re-render model. Exposes a useSyncExternalStore-compatible
 // store (subscribe/getSnapshot) for the UI-relevant slice of that state,
 // plus action functions the React components call on user events.
-import { createWorld, destroy, clear, clearChildren, startLoop, hierarchySystem } from "@bloobitygook/engine/core";
+import { createWorld, destroy, clear, clearChildren, startLoop, hierarchySystem, query } from "@bloobitygook/engine/core";
 import {
   gravitySystem,
   integrateSystem,
@@ -17,7 +17,7 @@ import {
 } from "@bloobitygook/engine/physics";
 import { behaviorSystem } from "@bloobitygook/behavior";
 import { animationSystem } from "@bloobitygook/animation";
-import { platformCarrySystem } from "@bloobitygook/platformer";
+import { platformCarrySystem, createKeyboardController } from "@bloobitygook/platformer";
 import {
   STANDARD_CATALOG,
   instantiateObject,
@@ -46,6 +46,7 @@ let stageEl = null;
 let worldEl = null;
 let gravityMarkerEl = null;
 let stopLoop = null; // set once startLoop() runs; disposeEngine() calls it and clears it
+let playerController = null; // createKeyboardController for whichever entity is tagged `player`, if any (see rebuildPlayerController)
 
 let snapshot = computeSnapshot();
 const listeners = new Set();
@@ -185,6 +186,13 @@ export function setMode(next) {
     placingGravityPoint = false;
     clearSelectionInternal();
   }
+  // Rebuilt here, not just on scene load: a player-input archetype
+  // instance placed live via the Palette (Setup mode only allows placing,
+  // never Running — see handleStagePointerDown's mode guard) wouldn't
+  // otherwise get a controller until the next full scene reload.
+  // Re-running this on every mode switch keeps it correct regardless of
+  // how the current player entity came to exist.
+  if (mode === "running") rebuildPlayerController();
   status = statusText(mode);
   notify();
 }
@@ -368,6 +376,39 @@ async function applyLoadedScene(data) {
   nextSceneId = data.nextSceneId ?? null;
   clearSelectionInternal();
   updateGravityMarker();
+  rebuildPlayerController();
+}
+
+// An input-mode archetype instance (packages/objects' archetype.js) is
+// tagged `player: true` and carries its own `inputMap`, but nothing
+// spawns a real keyboard controller for it or forwards keydown/keyup
+// events — apps/goop and apps/scene-player each wire this up themselves,
+// and the editor's own Run mode needs the same wiring to be a faithful
+// preview rather than a silent dead end. Re-run any time the world's
+// entities change wholesale (a scene load/switch/catalog change), since
+// the player entity itself is a new object each time.
+function rebuildPlayerController() {
+  const player = query(world, ["player"])[0];
+  playerController = player ? createKeyboardController(player) : null;
+}
+
+// Only forwards while actually running — Setup mode freezes the
+// simulation (see update()), so there's nothing for input to drive, and
+// arrow keys/space should keep their normal page-scroll behavior while
+// editing. Mirrors apps/goop's/apps/scene-player's own keydown handling.
+function handleKeyDown(e) {
+  if (mode !== "running" || !playerController) return;
+  if (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === " ") e.preventDefault();
+  playerController.handleKeyDown(e.key);
+}
+
+// Always forwarded regardless of mode, unlike keydown — if a key was
+// pressed while running and mode flips to setup before it's released,
+// the controller's internal `held` tracking (packages/platformer's
+// keyboardController.js) still needs the matching release to stay in
+// sync for next time.
+function handleKeyUp(e) {
+  playerController?.handleKeyUp(e.key);
 }
 
 export function setStatus(text) {
@@ -436,6 +477,8 @@ export async function initEngine({ stageEl: stage, worldEl: worldGroup, gravityM
   status = statusText(mode);
   notify();
 
+  window.addEventListener("keydown", handleKeyDown);
+  window.addEventListener("keyup", handleKeyUp);
   stopLoop = startLoop({ update, render });
 }
 
@@ -447,6 +490,8 @@ export async function initEngine({ stageEl: stage, worldEl: worldGroup, gravityM
 // selection/gravity/file-handle from the previous game.
 export function disposeEngine() {
   if (!stopLoop) return;
+  window.removeEventListener("keydown", handleKeyDown);
+  window.removeEventListener("keyup", handleKeyUp);
   stopLoop();
   stopLoop = null;
   clearSelectionInternal();
@@ -457,6 +502,7 @@ export function disposeEngine() {
   gravity = DEFAULT_GRAVITY;
   catalog = STANDARD_CATALOG.enabledIn(["ball"]);
   armedId = "ball";
+  playerController = null;
   mode = "setup";
   status = "";
   currentSceneId = null;

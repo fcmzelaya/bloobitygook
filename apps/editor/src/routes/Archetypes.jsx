@@ -12,7 +12,11 @@ export function Archetypes() {
   const [ids, setIds] = useState(null);
   const [error, setError] = useState(null);
   const [editingId, setEditingId] = useState(null); // null = list view, "" = new, else an existing id
-  const [editingData, setEditingData] = useState(null);
+  // undefined = still fetching an existing archetype's data; null = either
+  // "new" (no data by design) or fetched-and-genuinely-missing; an object
+  // once loaded. Distinct from null so the editor never mounts on a
+  // still-in-flight fetch — see openExisting's comment below.
+  const [editingData, setEditingData] = useState(undefined);
 
   const refresh = useCallback(async () => {
     if (!isCloudEnabled) return;
@@ -31,17 +35,29 @@ export function Archetypes() {
 
   const openNew = () => {
     setEditingId("");
-    setEditingData(null);
+    setEditingData(null); // a genuinely blank form is correct here, not "still loading"
   };
 
+  // ArchetypeEditor's form state is seeded from `initial` only once, in a
+  // useState initializer (it has to be — the fields are editable, so it
+  // can't just re-derive from props every render). That means it must not
+  // mount at all until the real data has arrived: mounting it early with
+  // `initial=null` while this fetch is in flight would seed the form
+  // blank, and the later, correct data arriving as a prop update would be
+  // silently ignored — editing an existing archetype would open (and
+  // save, if you didn't notice) as if it were brand new. `editingData`
+  // stays `undefined` for exactly that in-flight window so the render
+  // below can gate on it.
   const openExisting = async (id) => {
     setEditingId(id);
-    setEditingData(await fetchArchetype(id));
+    setEditingData(undefined);
+    const data = await fetchArchetype(id);
+    setEditingData(data ?? null);
   };
 
   const closeEditor = () => {
     setEditingId(null);
-    setEditingData(null);
+    setEditingData(undefined);
     refresh();
   };
 
@@ -82,8 +98,10 @@ export function Archetypes() {
             </button>
           )}
         </>
+      ) : editingData === undefined ? (
+        <p>Loading…</p>
       ) : (
-        <ArchetypeEditor id={editingId} initial={editingData} onDone={closeEditor} onCancel={closeEditor} />
+        <ArchetypeEditor key={editingId} id={editingId} initial={editingData} onDone={closeEditor} onCancel={closeEditor} />
       )}
     </div>
   );
