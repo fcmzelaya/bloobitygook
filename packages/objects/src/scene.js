@@ -13,10 +13,16 @@ import { instantiateObject, serializeObject } from "./instantiate.js";
 // whatever a game enables) rather than needing to be threaded through as
 // a separate argument — the catalog *is* the source of truth for which
 // ids are enabled.
-export function serializeScene(world, gravity, catalog) {
+// `nextSceneId` (string | null | undefined) chains a game's scenes into a
+// simple linked sequence — see packages/objects' README-equivalent
+// (CLAUDE.md's "Scene navigation" note). Passed through as plain data,
+// same as gravity/catalogIds; no logic lives here, only in whichever app
+// actually advances on it (apps/scene-player, or the editor's
+// switchScene).
+export function serializeScene(world, gravity, catalog, nextSceneId = null) {
   const objects = query(world, ["catalogId"]).map((e) => serializeObject(catalog, e));
   const catalogIds = catalog.all().map((d) => d.id);
-  return { version: 1, gravity, catalogIds, objects };
+  return { version: 1, gravity, catalogIds, objects, nextSceneId };
 }
 
 export function loadScene(world, worldEl, sceneData, catalog) {
@@ -30,6 +36,12 @@ export function loadScene(world, worldEl, sceneData, catalog) {
     instantiateObject(catalog, def.type, world, worldEl, def);
   }
   return normalizeGravity(sceneData.gravity);
+}
+
+// A scene predating this field (or one with no next scene) has none —
+// `null`, not an empty string, so a caller can `if (nextSceneId)` cleanly.
+export function nextSceneIdOf(sceneData) {
+  return sceneData.nextSceneId ?? null;
 }
 
 // Which of a game's declared catalog ids to enable when the scene file

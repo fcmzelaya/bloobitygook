@@ -81,6 +81,60 @@ describe("collisionSystem", () => {
     collisionSystem(world, { floorY: 560, left: 0, right: 800 });
     expect(e.grounded).toBe(false);
   });
+
+  it("applies friction at full strength on a genuinely hard impact", () => {
+    const world = createWorld();
+    // impact (600) meets IMPACT_REFERENCE_SPEED exactly -> full friction,
+    // matching the pre-fix flat `vx *= 1 - friction` behavior for a hard hit.
+    const e = spawn(world, {
+      dynamic: true, x: 400, y: 555, vx: 100, vy: 600,
+      radius: 10, restitution: 0, friction: 0.3,
+    });
+    collisionSystem(world, { floorY: 560, left: 0, right: 800 });
+    expect(e.vx).toBeCloseTo(70); // 100 * (1 - 0.3)
+  });
+
+  it("barely touches vx on a resting-frame micro-impact, instead of nuking it", () => {
+    const world = createWorld();
+    // A resting body's own tiny per-frame gravity drift (a few px/s), not
+    // a real landing — friction should scale down to almost nothing here.
+    const e = spawn(world, {
+      dynamic: true, x: 400, y: 555, vx: 100, vy: 15,
+      radius: 10, restitution: 0.5, friction: 0.3,
+    });
+    collisionSystem(world, { floorY: 560, left: 0, right: 800 });
+    // factor = 0.3 * min(15/600, 1) = 0.0075 -> vx *= 0.9925
+    expect(e.vx).toBeCloseTo(99.25);
+  });
+
+  it("sustains most of a held-key's horizontal velocity across many resting ticks", () => {
+    const world = createWorld();
+    const e = spawn(world, {
+      dynamic: true, x: 400, y: 550, vx: 220, vy: 0,
+      radius: 10, restitution: 0.3, friction: 0.3,
+    });
+    const bounds = { floorY: 560, left: 0, right: 800 };
+    // Simulate ~1 second of resting-on-the-floor ticks at 60fps: gravity
+    // nudges vy down each frame, collisionSystem corrects it right back
+    // out — exactly the scenario that used to decay vx to ~0 within a
+    // handful of frames regardless of how long a movement key was held.
+    for (let i = 0; i < 60; i++) {
+      e.vy += 900 * (1 / 60); // gravitySystem's uniform-mode increment
+      e.y += e.vy * (1 / 60); // integrateSystem
+      collisionSystem(world, bounds);
+    }
+    expect(e.vx).toBeGreaterThan(150); // was ~0 before the impact-scaled fix
+  });
+
+  it("scales wall-impact friction (vy) the same way as floor-impact friction (vx)", () => {
+    const world = createWorld();
+    const e = spawn(world, {
+      dynamic: true, x: 5, y: 300, vx: -600, vy: 100,
+      radius: 10, restitution: 0, friction: 0.4,
+    });
+    collisionSystem(world, { floorY: 560, left: 0, right: 800 });
+    expect(e.vy).toBeCloseTo(60); // 100 * (1 - 0.4), impact(600) saturates the factor
+  });
 });
 
 describe("ballCollisionSystem", () => {

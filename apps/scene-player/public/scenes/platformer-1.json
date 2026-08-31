@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "gravity": { "mode": "uniform", "magnitude": 900, "x": 400, "y": 300 },
+  "catalogIds": ["hero", "moving-platform", "goal"],
+  "nextSceneId": "platformer-2",
+  "objects": [
+    { "type": "hero", "x": 80, "y": 400, "vx": 0, "vy": 0, "stats": {} },
+    { "type": "moving-platform", "x": 400, "y": 470, "vx": 0, "vy": 0, "stats": {} },
+    { "type": "goal", "x": 700, "y": 540, "vx": 0, "vy": 0, "stats": { "width": 40, "height": 40 } }
+  ]
+}

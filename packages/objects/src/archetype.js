@@ -22,11 +22,23 @@ function statsFromProperties(properties, overrides = {}) {
   return stats;
 }
 
-function spawnShapeVisual(worldEl, { shape, fill }, radius) {
-  const el =
-    shape === "rect"
-      ? createSvgElement("rect", { x: -radius, y: -radius, width: radius * 2, height: radius * 2, fill })
-      : createSvgElement("circle", { r: radius, fill });
+// A rect visual normally draws a `boundingRadius`-sized square (the
+// collision shape stays circular regardless — see the doc comment on
+// `boundingRadius` in the editor form). `platformSize` is the one
+// exception: a platform archetype's footprint is genuinely rectangular
+// (wide and thin, not square), so its rect visual matches that instead —
+// otherwise a platform would render as a square the size of its bounding
+// circle, nothing like its actual shape.
+function spawnShapeVisual(worldEl, { shape, fill }, radius, platformSize) {
+  let el;
+  if (shape === "rect" && platformSize) {
+    const { width, height } = platformSize;
+    el = createSvgElement("rect", { x: -width / 2, y: -height / 2, width, height, fill });
+  } else if (shape === "rect") {
+    el = createSvgElement("rect", { x: -radius, y: -radius, width: radius * 2, height: radius * 2, fill });
+  } else {
+    el = createSvgElement("circle", { r: radius, fill });
+  }
   worldEl.appendChild(el);
   // Same node for el/circleEl, no wrapper — renderSystem's transform and
   // animationSystem's frame-attribute swaps both always target
@@ -67,9 +79,9 @@ function spawnSvgVisual(worldEl, { svgMarkup }) {
   return { el, circleEl: null };
 }
 
-function buildVisual(worldEl, visual, radius) {
+function buildVisual(worldEl, visual, radius, platformSize) {
   if (visual.kind === "svg") return spawnSvgVisual(worldEl, visual);
-  if (visual.kind === "shape") return spawnShapeVisual(worldEl, visual, radius);
+  if (visual.kind === "shape") return spawnShapeVisual(worldEl, visual, radius, platformSize);
   throw new Error(`Unsupported visual kind "${visual.kind}"`);
 }
 
@@ -106,19 +118,31 @@ function attachBehavior(entity, behaviorConfig) {
 export function spawnFromArchetype(world, worldEl, def, archetype) {
   const { x, y, vx = 0, vy = 0 } = def;
   const radius = archetype.boundingRadius;
-  const { restitution = 0.5, friction = 0.3 } = archetype.physics ?? {};
+  const { restitution = 0.5, friction = 0.3, dynamic = true, platformSize } = archetype.physics ?? {};
   const stats = statsFromProperties(archetype.properties, def.stats);
 
-  const { el, circleEl } = buildVisual(worldEl, archetype.visual, radius);
+  const { el, circleEl } = buildVisual(worldEl, archetype.visual, radius, platformSize);
 
   const entity = spawn(world, {
     entityType: "archetypeInstance",
-    dynamic: true,
+    // Omitted entirely (not just set to false) when the archetype opts
+    // out of physics — packages/engine's query() matches on field
+    // *presence*, not truthiness, so gravitySystem/integrateSystem/
+    // collisionSystem/ballCollisionSystem only skip an entity that
+    // genuinely lacks the "dynamic" key. A platform archetype sets
+    // `physics.dynamic: false` to get exactly that: it neither falls nor
+    // bounces off stage bounds, and moves only via its own behavior
+    // (e.g. the patrolKinematic preset, which mutates x/y directly).
+    ...(dynamic ? { dynamic: true } : {}),
     x, y, vx, vy,
     radius, restitution, friction,
     scaleX: 1, scaleY: 1, scaleVelX: 0, scaleVelY: 0,
     el, circleEl,
     stats,
+    // Present only on platform archetypes — packages/platformer's
+    // platformCarrySystem is the one consumer, queried by this field's
+    // presence rather than a category name.
+    ...(platformSize ? { platformSize } : {}),
   });
   attachBehavior(entity, archetype.behavior);
   return entity;
@@ -136,6 +160,54 @@ export function serializeFromArchetype(entity) {
     vy: round(entity.vy ?? 0),
     stats: { ...entity.stats },
   };
+}
+
+// Archetype inheritance: an archetype can name a parent via `extends`, and
+// resolveArchetype walks that chain and merges parent -> child before
+// anything else ever sees the record. spawnFromArchetype/
+// archetypeToDefinition never need to know inheritance exists — resolution
+// always happens first, in the shared scene loader (sceneLoader.js).
+//
+// `byId(id)` is injected (a Map, or anything with a `.get`) rather than
+// this module reaching into a specific catalog/store — resolveArchetype
+// itself has zero I/O.
+export function resolveArchetype(archetype, byId, visited = new Set()) {
+  if (!archetype.extends) return archetype;
+  if (visited.has(archetype.id)) {
+    throw new Error(`Archetype inheritance cycle detected at "${archetype.id}"`);
+  }
+  visited.add(archetype.id);
+
+  const parentRaw = byId.get(archetype.extends);
+  if (!parentRaw) {
+    throw new Error(`Archetype "${archetype.id}" extends unknown archetype "${archetype.extends}"`);
+  }
+  const parent = resolveArchetype(parentRaw, byId, visited);
+
+  return {
+    ...parent,
+    ...archetype,
+    physics: { ...parent.physics, ...archetype.physics },
+    visual: { ...parent.visual, ...archetype.visual },
+    // The child's own behavior wins wholesale when present — merging two
+    // different behavior shapes field-by-field wouldn't make sense (e.g.
+    // an inputMap vs. a scripted preset), so "more specific wins" is the
+    // only reasonable rule.
+    behavior: archetype.behavior ?? parent.behavior,
+    // Properties concatenate, with a child's same-named entry overriding
+    // the parent's rather than appearing twice.
+    properties: mergeProperties(parent.properties, archetype.properties),
+  };
+}
+
+function mergeProperties(parentProps = [], childProps = []) {
+  const merged = [...parentProps];
+  for (const childProp of childProps) {
+    const i = merged.findIndex((p) => p.name === childProp.name);
+    if (i === -1) merged.push(childProp);
+    else merged[i] = childProp;
+  }
+  return merged;
 }
 
 // Wraps a fetched/authored archetype record into an ordinary catalog

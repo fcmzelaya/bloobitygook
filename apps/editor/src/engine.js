@@ -3,7 +3,7 @@
 // React's re-render model. Exposes a useSyncExternalStore-compatible
 // store (subscribe/getSnapshot) for the UI-relevant slice of that state,
 // plus action functions the React components call on user events.
-import { createWorld, destroy, clear, clearChildren, startLoop } from "@bloobitygook/engine/core";
+import { createWorld, destroy, clear, clearChildren, startLoop, hierarchySystem } from "@bloobitygook/engine/core";
 import {
   gravitySystem,
   integrateSystem,
@@ -15,15 +15,14 @@ import {
   saveScene,
   openScene,
 } from "@bloobitygook/engine/physics";
+import { behaviorSystem } from "@bloobitygook/behavior";
+import { animationSystem } from "@bloobitygook/animation";
+import { platformCarrySystem } from "@bloobitygook/platformer";
 import {
   STANDARD_CATALOG,
-  STANDARD_DEFINITIONS,
-  createCatalog,
-  catalogIdsOf,
   instantiateObject,
   serializeScene,
-  loadScene,
-  archetypeToDefinition,
+  loadSceneWithArchetypes,
 } from "@bloobitygook/objects";
 import { findEntityAt, isGravityMarkerVisible, isPlaceGravityButtonEnabled, statusText } from "./ui-helpers.js";
 import { isCloudEnabled, publishScene, fetchPublishedScene } from "./publish.js";
@@ -40,6 +39,8 @@ let selected = null;
 let placingGravityPoint = false;
 let fileHandle = null; // reused so repeat Saves overwrite in place, not re-prompt
 let status = ""; // blank until a game's Stage mounts and initEngine() sets a real message
+let currentSceneId = null; // which scene id is actually loaded right now (can differ from the route's sceneId after switchScene)
+let nextSceneId = null; // this scene's own "next" pointer — see packages/objects' scene.js nextSceneId field
 
 let stageEl = null;
 let worldEl = null;
@@ -70,6 +71,13 @@ function selectedSnapshot(entity) {
   if (base.definitionCategory === "tool") {
     return { ...base, x: entity.x, y: entity.y, category: entity.category, allowedTypes: entity.allowedTypes, strategy: entity.strategy };
   }
+  // Generic branch for any archetype instance (character, platform, goal,
+  // ...) — keyed on the presence of `.stats` rather than a category
+  // string, so it's collision-free with the `tool` branch above no matter
+  // what category name a user picks for their own archetype.
+  if (entity.stats !== undefined) {
+    return { ...base, stats: { ...entity.stats } };
+  }
   return base;
 }
 
@@ -78,10 +86,13 @@ function computeSnapshot() {
     mode,
     gravity,
     catalog: catalog.all().map(catalogEntrySnapshot),
+    catalogIds: catalog.all().map((d) => d.id),
     armedId,
     selected: selected ? selectedSnapshot(selected) : null,
     placeGravityBtnEnabled: isPlaceGravityButtonEnabled(mode, gravity),
     status,
+    sceneId: currentSceneId,
+    nextSceneId,
   };
 }
 
@@ -150,6 +161,14 @@ export function updateSelectedProp(key, value) {
   if (!selected) return;
   selected[key] = value;
   if (selected.catalogId === "ball" && (key === "radius" || key === "color")) syncBallVisual(selected);
+  notify();
+}
+
+// updateSelectedProp's flat `selected[key] = value` doesn't reach a
+// nested stat — this is its equivalent for the generic `.stats` branch.
+export function updateSelectedStat(name, value) {
+  if (!selected?.stats) return;
+  selected.stats[name] = value;
   notify();
 }
 
@@ -228,7 +247,7 @@ export function handleStagePointerDown(clientX, clientY) {
 
 export async function saveSceneToFile() {
   try {
-    fileHandle = await saveScene(serializeScene(world, gravity, catalog), { handle: fileHandle });
+    fileHandle = await saveScene(serializeScene(world, gravity, catalog, nextSceneId), { handle: fileHandle });
     status = "Scene saved";
   } catch (err) {
     if (err.name !== "AbortError") status = `Save failed: ${err.message}`;
@@ -250,7 +269,7 @@ export async function openSceneFromFile() {
 
 export async function publishCurrentScene(sceneId) {
   try {
-    await publishScene(sceneId, serializeScene(world, gravity, catalog));
+    await publishScene(sceneId, serializeScene(world, gravity, catalog, nextSceneId));
     status = `Published "${sceneId}"`;
   } catch (err) {
     status = `Publish failed: ${err.message}`;
@@ -269,28 +288,84 @@ export async function loadSceneFromCloud(sceneId) {
   notify();
 }
 
-// Shared by every "load scene data into the live world" path (opening a
-// local file, loading from cloud, or the initial initEngine load) — each
-// one has to rebuild the catalog from the loaded file's own catalogIds,
-// not just re-run loadScene against whatever catalog happened to be
-// active before, since a loaded file can enable a different object set.
-//
-// An id the built-in STANDARD_CATALOG doesn't recognize is fetched as a
-// user-authored archetype (see archetypes.js) and adapted into an
-// ordinary definition — async, since that's a Storage round trip. A
-// missing/offline archetype is simply left out rather than failing the
-// whole load: loadScene's own "unknown type — skipped" warning already
-// handles a scene referencing a type the active catalog doesn't have.
-async function applyLoadedScene(data) {
-  const ids = catalogIdsOf(data);
-  const unknownIds = ids.filter((id) => !STANDARD_CATALOG.byId(id));
-  const fetchedArchetypes =
-    isCloudEnabled && unknownIds.length > 0 ? await Promise.all(unknownIds.map((id) => fetchArchetype(id))) : [];
-  const archetypeDefinitions = fetchedArchetypes.filter(Boolean).map(archetypeToDefinition);
+// Replaces the live world in place with another scene — the editor-side
+// half of scene navigation. No route change: sceneId isn't part of the
+// URL today, and this doesn't need to become bookmarkable to satisfy "a
+// good way to navigate between scenes" (reopening the game and
+// re-navigating the chain is enough for now). Reuses the same
+// fetch-then-applyLoadedScene path as the initial load.
+export async function switchScene(targetSceneId) {
+  try {
+    const data = await loadSceneData(targetSceneId);
+    await applyLoadedScene(data);
+    currentSceneId = targetSceneId;
+    status = `Switched to scene "${targetSceneId}"`;
+  } catch (err) {
+    status = `Switch failed: ${err.message}`;
+  }
+  notify();
+}
 
-  catalog = createCatalog([...STANDARD_DEFINITIONS, ...archetypeDefinitions]).enabledIn(ids);
+// The one authoring flow that actually needs scene navigation: link the
+// current scene to a brand-new one and jump to it, so a sequence of
+// levels can be built one at a time. Publishes the current scene (with
+// its nextSceneId now set) and a fresh empty scene at the new id, then
+// switches the live canvas over.
+export async function createLinkedScene(newSceneId) {
+  if (!currentSceneId || !newSceneId) return;
+  nextSceneId = newSceneId;
+  try {
+    await publishScene(currentSceneId, serializeScene(world, gravity, catalog, nextSceneId));
+    await publishScene(newSceneId, {
+      version: 1,
+      gravity: DEFAULT_GRAVITY,
+      catalogIds: catalog.all().map((d) => d.id),
+      objects: [],
+      nextSceneId: null,
+    });
+  } catch (err) {
+    status = `Failed to create linked scene: ${err.message}`;
+    notify();
+    return;
+  }
+  await switchScene(newSceneId);
+}
+
+// Toggles scene membership for a built-in/archetype id and re-runs the
+// shared loader so the live world reflects the new set immediately.
+// Removing an id doesn't retroactively touch already-placed instances of
+// it — they're just dropped on the next load, matching loadScene's
+// existing "unknown type — skipped" tolerance.
+export async function setCatalogIds(nextIds) {
+  const data = serializeScene(world, gravity, catalog, nextSceneId);
+  data.catalogIds = nextIds;
+  await applyLoadedScene(data);
+  status = "Scene objects updated";
+  notify();
+}
+
+// Shared by every "load scene data into the live world" path (opening a
+// local file, loading from cloud, switching to another scene, or the
+// initial initEngine load) — each one has to rebuild the catalog from the
+// loaded file's own catalogIds, not just re-run loadScene against
+// whatever catalog happened to be active before, since a loaded file can
+// enable a different object set. Delegates to packages/objects' shared
+// loadSceneWithArchetypes, which also resolves any archetype-inheritance
+// chain (an id's `extends` ancestors, even ones this scene doesn't list
+// directly) before spawning. `fetchArchetype` is only passed when cloud
+// is enabled — otherwise every unknown id is simply left out, matching
+// loadScene's existing "unknown type — skipped" tolerance.
+async function applyLoadedScene(data) {
+  const { gravity: loadedGravity, catalog: loadedCatalog } = await loadSceneWithArchetypes({
+    sceneData: data,
+    world,
+    worldEl,
+    fetchArchetype: isCloudEnabled ? fetchArchetype : undefined,
+  });
+  catalog = loadedCatalog;
   armedId = catalog.all()[0]?.id ?? null;
-  gravity = loadScene(world, worldEl, data, catalog);
+  gravity = loadedGravity;
+  nextSceneId = data.nextSceneId ?? null;
   clearSelectionInternal();
   updateGravityMarker();
 }
@@ -300,16 +375,23 @@ export function setStatus(text) {
   notify();
 }
 
+// Tick order matches apps/scene-player's runtime loop exactly (see its
+// main.js) so a scene behaves identically whether it's being tested via
+// the editor's Run mode or actually played.
 function update(dt) {
   if (mode !== "running") return; // setup mode freezes the simulation for editing
   gravitySystem(world, dt, gravity);
+  behaviorSystem(world, dt);
   integrateSystem(world, dt);
   collisionSystem(world, BOUNDS);
+  platformCarrySystem(world);
   ballCollisionSystem(world);
   deformationSystem(world, dt);
+  animationSystem(world, dt);
 }
 
 function render() {
+  hierarchySystem(world);
   renderSystem(world);
 }
 
@@ -347,6 +429,7 @@ export async function initEngine({ stageEl: stage, worldEl: worldGroup, gravityM
   worldEl = worldGroup;
   gravityMarkerEl = marker;
 
+  currentSceneId = sceneId;
   const data = await loadSceneData(sceneId);
   await applyLoadedScene(data);
   mode = "setup";
@@ -376,6 +459,8 @@ export function disposeEngine() {
   armedId = "ball";
   mode = "setup";
   status = "";
+  currentSceneId = null;
+  nextSceneId = null;
   stageEl = null;
   worldEl = null;
   gravityMarkerEl = null;

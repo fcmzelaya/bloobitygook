@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { createWorld } from "@bloobitygook/engine/core";
 import { createCatalog } from "../src/catalog.js";
 import { instantiateObject, serializeObject } from "../src/instantiate.js";
-import { spawnFromArchetype, serializeFromArchetype, archetypeToDefinition } from "../src/archetype.js";
+import { spawnFromArchetype, serializeFromArchetype, archetypeToDefinition, resolveArchetype } from "../src/archetype.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const makeWorldEl = () => document.createElementNS(SVG_NS, "g");
@@ -89,6 +89,53 @@ describe("spawnFromArchetype", () => {
   });
 });
 
+describe("spawnFromArchetype physics.dynamic / physics.platformSize", () => {
+  it("defaults to a dynamic (physics-driven) entity when physics.dynamic is omitted", () => {
+    const world = createWorld();
+    const entity = spawnFromArchetype(world, makeWorldEl(), { x: 0, y: 0 }, GOBLIN);
+    expect(entity.dynamic).toBe(true);
+    expect("dynamic" in entity).toBe(true);
+  });
+
+  it("omits the dynamic field entirely (not just sets it false) when physics.dynamic is false", () => {
+    const world = createWorld();
+    const platform = { ...GOBLIN, physics: { ...GOBLIN.physics, dynamic: false } };
+    const entity = spawnFromArchetype(world, makeWorldEl(), { x: 0, y: 0 }, platform);
+    // query() matches on key presence, not truthiness — a lingering
+    // `dynamic: false` key would still be picked up by gravitySystem/
+    // integrateSystem/collisionSystem, so this must be a real omission.
+    expect("dynamic" in entity).toBe(false);
+  });
+
+  it("carries platformSize onto the entity when the archetype sets it", () => {
+    const world = createWorld();
+    const platform = { ...GOBLIN, physics: { ...GOBLIN.physics, dynamic: false, platformSize: { width: 120, height: 20 } } };
+    const entity = spawnFromArchetype(world, makeWorldEl(), { x: 0, y: 0 }, platform);
+    expect(entity.platformSize).toEqual({ width: 120, height: 20 });
+  });
+
+  it("omits platformSize when the archetype doesn't set it", () => {
+    const world = createWorld();
+    const entity = spawnFromArchetype(world, makeWorldEl(), { x: 0, y: 0 }, GOBLIN);
+    expect("platformSize" in entity).toBe(false);
+  });
+
+  it("renders a rect visual sized to platformSize rather than the square boundingRadius shape", () => {
+    const world = createWorld();
+    const platform = {
+      ...GOBLIN,
+      boundingRadius: 80,
+      visual: { kind: "shape", shape: "rect", fill: "#5b7ca8" },
+      physics: { ...GOBLIN.physics, dynamic: false, platformSize: { width: 160, height: 20 } },
+    };
+    const entity = spawnFromArchetype(world, makeWorldEl(), { x: 0, y: 0 }, platform);
+    expect(entity.el.getAttribute("width")).toBe("160");
+    expect(entity.el.getAttribute("height")).toBe("20");
+    expect(entity.el.getAttribute("x")).toBe("-80");
+    expect(entity.el.getAttribute("y")).toBe("-10");
+  });
+});
+
 describe("spawnFromArchetype behavior wiring", () => {
   it("attaches no behavior for mode 'static' (or when behavior is omitted)", () => {
     const world = createWorld();
@@ -165,5 +212,81 @@ describe("archetypeToDefinition", () => {
   it("buildSpawnDef returns every property at its default", () => {
     const definition = archetypeToDefinition(GOBLIN);
     expect(definition.buildSpawnDef(1, 2)).toEqual({ x: 1, y: 2, stats: { moveSpeed: 150, health: 3 } });
+  });
+});
+
+describe("resolveArchetype", () => {
+  it("returns the archetype unchanged when it doesn't extend anything", () => {
+    expect(resolveArchetype(GOBLIN, new Map())).toBe(GOBLIN);
+  });
+
+  it("merges physics/visual and overrides same-named properties from the parent", () => {
+    const base = {
+      ...GOBLIN,
+      id: "base-enemy",
+      physics: { restitution: 0.3, friction: 0.4 },
+      visual: { kind: "shape", shape: "circle", fill: "#a06a3c" },
+      properties: [
+        { name: "moveSpeed", default: 150, required: true },
+        { name: "health", default: 3, required: false },
+      ],
+    };
+    const child = {
+      id: "goblin-elite",
+      extends: "base-enemy",
+      label: "Goblin Elite",
+      category: "character",
+      swatch: "#ff0000",
+      boundingRadius: 24,
+      physics: { restitution: 0.9 },
+      visual: { fill: "#ff0000" },
+      properties: [{ name: "health", default: 10, required: false }],
+    };
+    const byId = new Map([["base-enemy", base]]);
+
+    const resolved = resolveArchetype(child, byId);
+    expect(resolved.physics).toEqual({ restitution: 0.9, friction: 0.4 });
+    expect(resolved.visual).toEqual({ kind: "shape", shape: "circle", fill: "#ff0000" });
+    expect(resolved.properties).toEqual([
+      { name: "moveSpeed", default: 150, required: true },
+      { name: "health", default: 10, required: false },
+    ]);
+    expect(resolved.boundingRadius).toBe(24); // child's own field, not inherited
+  });
+
+  it("lets the child's own behavior win wholesale over the parent's", () => {
+    const base = { ...GOBLIN, id: "base", behavior: { mode: "scripted", preset: "patrol" } };
+    const child = { id: "child", extends: "base", behavior: { mode: "scripted", preset: "chase" } };
+    const resolved = resolveArchetype(child, new Map([["base", base]]));
+    expect(resolved.behavior).toEqual({ mode: "scripted", preset: "chase" });
+  });
+
+  it("falls back to the parent's behavior when the child doesn't set one", () => {
+    const base = { ...GOBLIN, id: "base", behavior: { mode: "scripted", preset: "patrol" } };
+    const child = { id: "child", extends: "base", label: "Child" };
+    const resolved = resolveArchetype(child, new Map([["base", base]]));
+    expect(resolved.behavior).toEqual({ mode: "scripted", preset: "patrol" });
+  });
+
+  it("walks a multi-level chain (grandparent -> parent -> child)", () => {
+    const grandparent = { id: "gp", label: "GP", category: "character", swatch: "#000", boundingRadius: 10, physics: { restitution: 0.1, friction: 0.1 }, properties: [], visual: { kind: "shape", shape: "circle", fill: "#000" }, behavior: { mode: "static" } };
+    const parent = { id: "p", extends: "gp", physics: { restitution: 0.5 } };
+    const child = { id: "c", extends: "p", physics: { friction: 0.9 } };
+    const byId = new Map([["gp", grandparent], ["p", parent]]);
+    const resolved = resolveArchetype(child, byId);
+    expect(resolved.physics).toEqual({ restitution: 0.5, friction: 0.9 });
+    expect(resolved.boundingRadius).toBe(10);
+  });
+
+  it("throws a clear error for a cycle instead of recursing forever", () => {
+    const a = { id: "a", extends: "b" };
+    const b = { id: "b", extends: "a" };
+    const byId = new Map([["a", a], ["b", b]]);
+    expect(() => resolveArchetype(a, byId)).toThrow(/cycle/i);
+  });
+
+  it("throws a clear error when extending an id that doesn't exist", () => {
+    const orphan = { id: "orphan", extends: "nonexistent" };
+    expect(() => resolveArchetype(orphan, new Map())).toThrow(/unknown archetype/i);
   });
 });

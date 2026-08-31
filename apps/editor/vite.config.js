@@ -5,6 +5,8 @@ export default defineConfig({
   plugins: [react()],
   optimizeDeps: {
     exclude: [
+      "@bloobitygook/animation",
+      "@bloobitygook/behavior",
       "@bloobitygook/engine",
       "@bloobitygook/game-manifest",
       "@bloobitygook/objects",

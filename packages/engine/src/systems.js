@@ -4,6 +4,14 @@ import { query } from "./world.js";
 // position each step. It's one line more than naive Euler and meaningfully
 // more stable for spring/bounce systems at a fixed-ish frame timestep.
 
+// How hard a collision has to be, in px/s, to count as a "full-strength"
+// hit — used both to scale the deformation squash (applyImpact, below)
+// and to scale how much of an entity's own `friction` a single contact
+// actually applies (collisionSystem's frictionFactor, below). Shared
+// because both are answering the same question: how big was this impact,
+// relative to what this demo's speeds typically look like.
+const IMPACT_REFERENCE_SPEED = 600; // px/s that maps to a full-strength squash/friction
+
 // `gravity` is { mode: "uniform" | "point", magnitude, x, y }. Point mode
 // pulls toward (x, y) at a constant magnitude (not inverse-square) — that
 // keeps the same slider comparable across modes instead of needing a
@@ -31,6 +39,25 @@ export function integrateSystem(world, dt) {
   }
 }
 
+// How much of an entity's own `friction` a single contact actually
+// applies, scaled by how hard that contact was (the same
+// IMPACT_REFERENCE_SPEED normalization applyImpact's squash already
+// uses). A genuinely hard impact (>= IMPACT_REFERENCE_SPEED) applies
+// friction at full strength, unchanged from before. This matters because
+// a body resting on the floor re-enters this branch on essentially every
+// tick (gravity nudges it back below floorY each frame, and this
+// function corrects it right back out) — without scaling, that "impact"
+// is really just a few px/s of residual gravity drift, but the old flat
+// `e.vx *= 1 - friction` still applied friction at full strength on every
+// one of those frames, compounding into a decay so fast that a walking
+// character's velocity died within a handful of frames no matter how
+// long a movement key was held (see packages/platformer). Scaling by
+// impact intensity keeps a real drop/landing's friction feel exactly as
+// it was while leaving a resting body's own velocity alone.
+function frictionFactor(impactSpeed, friction) {
+  return friction * Math.min(impactSpeed / IMPACT_REFERENCE_SPEED, 1);
+}
+
 // Resolves collisions against the stage's floor and side walls: pushes the
 // entity back inside bounds, reflects velocity along the collision normal
 // scaled by restitution (elasticity), damps the tangential velocity by
@@ -52,7 +79,7 @@ export function collisionSystem(world, bounds) {
       e.y = bounds.floorY - e.radius;
       const impact = Math.abs(e.vy);
       e.vy = -e.vy * restitution;
-      e.vx *= 1 - friction;
+      e.vx *= 1 - frictionFactor(impact, friction);
       applyImpact(e, impact, "y");
       e.grounded = true;
     }
@@ -61,13 +88,13 @@ export function collisionSystem(world, bounds) {
       e.x = bounds.left + e.radius;
       const impact = Math.abs(e.vx);
       e.vx = -e.vx * restitution;
-      e.vy *= 1 - friction;
+      e.vy *= 1 - frictionFactor(impact, friction);
       applyImpact(e, impact, "x");
     } else if (e.x + e.radius > bounds.right) {
       e.x = bounds.right - e.radius;
       const impact = Math.abs(e.vx);
       e.vx = -e.vx * restitution;
-      e.vy *= 1 - friction;
+      e.vy *= 1 - frictionFactor(impact, friction);
       applyImpact(e, impact, "x");
     }
   }
@@ -163,7 +190,6 @@ function resolveBallPair(a, b) {
   applyIsotropicImpact(b, impactSpeed);
 }
 
-const IMPACT_REFERENCE_SPEED = 600; // px/s that maps to a full-strength squash
 const IMPACT_KICK = 7; // scale-velocity units imparted at full-strength impact
 
 // Uniform shrink pulse for ball-ball hits — cheaper than the directional

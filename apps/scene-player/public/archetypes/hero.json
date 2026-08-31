@@ -1,0 +1,21 @@
+{
+  "id": "hero",
+  "label": "Hero",
+  "category": "character",
+  "swatch": "#7ee08a",
+  "boundingRadius": 18,
+  "physics": { "restitution": 0.1, "friction": 0.3 },
+  "properties": [
+    { "name": "moveSpeed", "default": 220, "required": true },
+    { "name": "jumpImpulse", "default": 480, "required": true }
+  ],
+  "visual": { "kind": "shape", "shape": "circle", "fill": "#7ee08a" },
+  "behavior": {
+    "mode": "input",
+    "inputMap": {
+      "ArrowLeft": { "onPress": "moveLeft", "onRelease": "stopMoving" },
+      "ArrowRight": { "onPress": "moveRight", "onRelease": "stopMoving" },
+      " ": { "onPress": "jump" }
+    }
+  }
+}

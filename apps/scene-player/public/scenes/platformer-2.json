@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "gravity": { "mode": "uniform", "magnitude": 900, "x": 400, "y": 300 },
+  "catalogIds": ["hero", "goal"],
+  "nextSceneId": null,
+  "objects": [
+    { "type": "hero", "x": 80, "y": 400, "vx": 0, "vy": 0, "stats": {} },
+    { "type": "goal", "x": 200, "y": 540, "vx": 0, "vy": 0, "stats": { "width": 40, "height": 40 } }
+  ]
+}

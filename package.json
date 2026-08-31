@@ -14,6 +14,7 @@
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
     "dev:fertris": "pnpm --filter @bloobitygook/fertris dev",
-    "dev:goop": "pnpm --filter @bloobitygook/goop dev"
+    "dev:goop": "pnpm --filter @bloobitygook/goop dev",
+    "dev:scene-player": "pnpm --filter @bloobitygook/scene-player dev"
   }
 }

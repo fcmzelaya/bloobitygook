@@ -1,0 +1,23 @@
+{
+  "name": "@bloobitygook/scene-player",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@bloobitygook/animation": "workspace:*",
+    "@bloobitygook/behavior": "workspace:*",
+    "@bloobitygook/engine": "workspace:*",
+    "@bloobitygook/objects": "workspace:*",
+    "@bloobitygook/platformer": "workspace:*",
+    "@bloobitygook/triggers": "workspace:*"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  },
+  "bloobitygook": { "route": "play-scene" }
+}

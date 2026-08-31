@@ -117,22 +117,55 @@ function SpawnerFields({ selected, catalog }) {
   );
 }
 
+// Covers any archetype instance uniformly (character, platform, goal, ...)
+// — keyed on `selected.stats` existing at all, not on a category string,
+// so it's collision-free with SpawnerFields' `"tool"` check no matter what
+// category name a user picks for their own archetype.
+function StatsFields({ selected }) {
+  const names = Object.keys(selected.stats);
+  if (names.length === 0) return <p className="editor-hint">No stats on this object.</p>;
+  return (
+    <div id="inspector-stats">
+      {names.map((name) => (
+        <label key={name}>
+          {name}
+          <input
+            type="number"
+            value={selected.stats[name]}
+            onChange={(e) => engine.updateSelectedStat(name, Number(e.target.value))}
+          />
+        </label>
+      ))}
+    </div>
+  );
+}
+
 export function Inspector() {
   const snap = useSyncExternalStore(engine.subscribe, engine.getSnapshot);
   const selected = snap.selected;
 
+  // Always rendered now that the outer floating chrome is a generic
+  // Window (see routes/GameEditor.jsx) — visibility is the user's own
+  // choice via the Windows menu, not something selection state should
+  // collapse out from under them. A placeholder hint fills the empty
+  // state instead of hiding the whole panel.
   return (
-    <div id="inspector" className={selected ? "visible" : ""}>
-      <h3>
-        {selected?.label ?? ""}
-        <span id="inspector-close" className="close-btn" onClick={() => engine.clearSelection()}>&times;</span>
-      </h3>
+    <div id="inspector">
       {selected && (
+        <h3>
+          {selected.label}
+          <span id="inspector-close" className="close-btn" onClick={() => engine.clearSelection()}>&times;</span>
+        </h3>
+      )}
+      {selected ? (
         <>
           {selected.catalogId === "ball" && <BallFields selected={selected} />}
           {selected.definitionCategory === "tool" && <SpawnerFields selected={selected} catalog={snap.catalog} />}
+          {selected.stats !== undefined && <StatsFields selected={selected} />}
           <button id="delete-btn" onClick={() => engine.deleteSelected()}>Delete</button>
         </>
+      ) : (
+        <p className="editor-hint">Select an object on the stage to edit it.</p>
       )}
     </div>
   );

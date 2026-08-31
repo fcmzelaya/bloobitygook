@@ -1,0 +1,9 @@
+{
+  "id": "moving-platform",
+  "extends": "platform",
+  "label": "Moving Platform",
+  "category": "platform",
+  "swatch": "#8a6fd6",
+  "visual": { "kind": "shape", "shape": "rect", "fill": "#8a6fd6" },
+  "behavior": { "mode": "scripted", "preset": "patrolKinematic", "range": 100, "speed": 60 }
+}

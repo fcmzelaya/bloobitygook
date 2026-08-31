@@ -38,6 +38,30 @@ export const BEHAVIOR_PRESETS = {
     },
   }),
 
+  // Same back-and-forth idea as `patrol`, but for a non-dynamic (gravity-
+  // exempt, physics-untouched) entity like a moving platform:
+  // integrateSystem never applies vx to a non-dynamic entity, so steering
+  // velocity wouldn't move one. This mutates entity.x directly instead —
+  // behaviorSystem queries only ["behavior"], so it runs regardless of
+  // `dynamic`. Kept as a separate preset rather than branching inside
+  // `patrol` so a dynamic entity's behavior stays exactly what it was.
+  patrolKinematic: ({ range = 80, speed = 100 } = {}) => ({
+    right: {
+      update: (entity, dt) => {
+        if (entity.patrolOrigin === undefined) entity.patrolOrigin = entity.x;
+        entity.x += speed * dt;
+      },
+      next: (entity) => (entity.x >= entity.patrolOrigin + range ? "left" : null),
+    },
+    left: {
+      update: (entity, dt) => {
+        if (entity.patrolOrigin === undefined) entity.patrolOrigin = entity.x;
+        entity.x -= speed * dt;
+      },
+      next: (entity) => (entity.x <= entity.patrolOrigin - range ? "right" : null),
+    },
+  }),
+
   // Steers horizontally toward the nearest entity tagged `player: true` —
   // the convention an input-driven archetype instance gets stamped with
   // at spawn time (see packages/objects/src/archetype.js), mirroring

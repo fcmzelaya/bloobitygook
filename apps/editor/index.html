@@ -323,15 +323,6 @@
     }
 
     #game-metadata-form {
-      position: fixed;
-      top: 56px;
-      left: 12px;
-      width: 260px;
-      z-index: 10;
-      background: #1a1f2b;
-      border: 1px solid #3a4152;
-      border-radius: 8px;
-      padding: 12px;
       color: #dfe4ee;
       font-size: 13px;
     }
@@ -387,6 +378,139 @@
     #game-metadata-form .form-actions button:hover { background: #2a3244; }
     #game-metadata-form .form-actions button:disabled { opacity: 0.4; cursor: default; }
 
+    /* Floating tool windows (see src/components/Window.jsx) — the one
+       reusable shell every panel below (Game Info/Toolbar/Palette/
+       Inspector/Scene) renders inside. Position/size/z-index are runtime
+       state set inline per-instance; everything else lives here. */
+    .window {
+      position: fixed;
+      display: flex;
+      flex-direction: column;
+      background: #1a1f2b;
+      border: 1px solid #3a4152;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+      overflow: hidden;
+    }
+    .window-titlebar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 6px 10px;
+      background: #161a24;
+      border-bottom: 1px solid #2a3244;
+      cursor: move;
+      touch-action: none;
+      flex-shrink: 0;
+    }
+    .window-titlebar-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #dfe4ee;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .window-close-btn {
+      flex-shrink: 0;
+      background: none;
+      border: none;
+      color: #8b93a7;
+      font-size: 15px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0 2px;
+    }
+    .window-close-btn:hover { color: #dfe4ee; }
+    .window-body {
+      flex: 1;
+      overflow: auto;
+      padding: 12px;
+      color: #dfe4ee;
+      font-size: 13px;
+    }
+    .window-resize-handle {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      width: 14px;
+      height: 14px;
+      cursor: nwse-resize;
+      touch-action: none;
+      background: linear-gradient(135deg, transparent 50%, #3a4152 50%);
+    }
+    /* A docked window sits flush against its edge, auto-fit by
+       dock-layout.js — no rounded corner/shadow, reads as "attached"
+       rather than floating. */
+    .window.docked {
+      border-radius: 0;
+      box-shadow: none;
+    }
+
+    /* Shown while dragging a window's title bar near a screen edge (see
+       Window.jsx / window-manager.js's dock-hover store) — the drop-zone
+       highlight that makes drag-to-dock discoverable. */
+    #dock-overlay-zone {
+      position: fixed;
+      z-index: 899;
+      background: rgba(91, 124, 168, 0.2);
+      border: 2px dashed #5b7ca8;
+      pointer-events: none;
+    }
+
+    /* Windows menu — reopen a closed window, or reset the whole layout */
+    #window-menu {
+      position: fixed;
+      top: 100px;
+      right: 12px;
+      z-index: 900;
+    }
+    #window-menu-btn {
+      font: inherit;
+      font-size: 13px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid #3a4152;
+      background: #1e2431;
+      color: #dfe4ee;
+      cursor: pointer;
+    }
+    #window-menu-btn:hover { background: #2a3244; }
+    #window-menu-dropdown {
+      margin-top: 6px;
+      background: #1a1f2b;
+      border: 1px solid #3a4152;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 13px;
+      color: #dfe4ee;
+      min-width: 160px;
+    }
+    #window-menu-dropdown .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 0;
+    }
+    #window-menu-divider {
+      height: 1px;
+      background: #2a3244;
+      margin: 8px 0;
+    }
+    #reset-layout-btn {
+      width: 100%;
+      font: inherit;
+      font-size: 12px;
+      padding: 5px 8px;
+      border-radius: 6px;
+      border: 1px solid #3a4152;
+      background: #1e2431;
+      color: #dfe4ee;
+      cursor: pointer;
+    }
+    #reset-layout-btn:hover { background: #2a3244; }
+
     /* Canvas editing (Stage + Toolbar + Inspector), only rendered when a
        game has a sceneId */
     #stage {
@@ -395,16 +519,22 @@
       height: 100vh;
       cursor: crosshair;
     }
+    /* Permanent top bar — not a window: always visible, never dragged
+       away or closed, since it holds the controls always needed. */
     #toolbar {
       position: fixed;
-      top: 56px;
-      left: 292px;
+      top: 44px;
+      left: 0;
+      right: 0;
+      z-index: 50;
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
       align-items: center;
-      max-width: calc(100vw - 304px);
-      z-index: 10;
+      padding: 8px 14px;
+      background: #161a24;
+      border-bottom: 1px solid #2a3244;
+      box-sizing: border-box;
     }
     #toolbar button, #toolbar select {
       font: inherit;
@@ -438,14 +568,9 @@
     /* Palette — which object a stage click places next, grouped by
        category. Sits below the Toolbar at the same left offset. */
     #palette {
-      position: fixed;
-      top: 100px;
-      left: 292px;
       display: flex;
       flex-wrap: wrap;
       gap: 14px;
-      max-width: calc(100vw - 304px);
-      z-index: 10;
     }
     #palette-hint {
       flex-basis: 100%;
@@ -490,20 +615,9 @@
     }
 
     #inspector {
-      position: fixed;
-      top: 56px;
-      right: 12px;
-      width: 220px;
-      background: #1a1f2b;
-      border: 1px solid #3a4152;
-      border-radius: 8px;
-      padding: 12px;
       color: #dfe4ee;
       font-size: 13px;
-      display: none;
-      z-index: 10;
     }
-    #inspector.visible { display: block; }
     #inspector h3 {
       margin: 0 0 10px;
       font-size: 13px;
@@ -569,7 +683,7 @@
       color: #dfe4ee;
       font-size: 13px;
       display: none;
-      z-index: 30;
+      z-index: 1000;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
     }
     #wizard-panel.visible { display: block; }

@@ -10,6 +10,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@bloobitygook/animation": "workspace:*",
+    "@bloobitygook/behavior": "workspace:*",
     "@bloobitygook/engine": "workspace:*",
     "@bloobitygook/game-manifest": "workspace:*",
     "@bloobitygook/objects": "workspace:*",

@@ -36,6 +36,12 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "@bloobitygook/goop", "dev"],
       "port": 5185
+    },
+    {
+      "name": "scene-player",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@bloobitygook/scene-player", "dev"],
+      "port": 5186
     }
   ]
 }

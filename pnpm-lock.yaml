@@ -10,6 +10,12 @@ importers:
 
   apps/editor:
     dependencies:
+      '@bloobitygook/animation':
+        specifier: workspace:*
+        version: link:../../packages/animation
+      '@bloobitygook/behavior':
+        specifier: workspace:*
+        version: link:../../packages/behavior
       '@bloobitygook/engine':
         specifier: workspace:*
         version: link:../../packages/engine
@@ -134,6 +140,31 @@ importers:
         specifier: ^6.0.0
         version: 6.4.3(@types/node@26.2.0)
 
+  apps/scene-player:
+    dependencies:
+      '@bloobitygook/animation':
+        specifier: workspace:*
+        version: link:../../packages/animation
+      '@bloobitygook/behavior':
+        specifier: workspace:*
+        version: link:../../packages/behavior
+      '@bloobitygook/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
+      '@bloobitygook/objects':
+        specifier: workspace:*
+        version: link:../../packages/objects
+      '@bloobitygook/platformer':
+        specifier: workspace:*
+        version: link:../../packages/platformer
+      '@bloobitygook/triggers':
+        specifier: workspace:*
+        version: link:../../packages/triggers
+    devDependencies:
+      vite:
+        specifier: ^6.0.0
+        version: 6.4.3(@types/node@26.2.0)
+
   apps/tetris:
     dependencies:
       '@bloobitygook/engine':
@@ -242,6 +273,10 @@ importers:
         version: 3.2.7(@types/node@26.2.0)(jsdom@27.4.0)
 
   packages/platformer:
+    dependencies:
+      '@bloobitygook/engine':
+        specifier: workspace:*
+        version: link:../engine
     devDependencies:
       vitest:
         specifier: ^3.0.0

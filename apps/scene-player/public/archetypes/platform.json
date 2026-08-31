@@ -1,0 +1,11 @@
+{
+  "id": "platform",
+  "label": "Platform",
+  "category": "platform",
+  "swatch": "#5b7ca8",
+  "boundingRadius": 80,
+  "physics": { "restitution": 0, "friction": 0, "dynamic": false, "platformSize": { "width": 160, "height": 20 } },
+  "properties": [],
+  "visual": { "kind": "shape", "shape": "rect", "fill": "#5b7ca8" },
+  "behavior": { "mode": "static" }
+}

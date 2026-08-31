@@ -5,7 +5,7 @@ import { sanitizeSvg } from "@bloobitygook/svg-import";
 import { ARCHETYPE_ACTIONS } from "@bloobitygook/platformer";
 
 const ACTION_NAMES = Object.keys(ARCHETYPE_ACTIONS);
-const BEHAVIOR_PRESETS = ["stationary", "patrol", "chase"];
+const BEHAVIOR_PRESETS = ["stationary", "patrol", "patrolKinematic", "chase"];
 
 // Created/edited entirely in the editor UI, no code file — see
 // packages/objects/src/archetype.js for how this record gets interpreted
@@ -135,6 +135,45 @@ export function ArchetypeEditor({ id, initial, onDone, onCancel }) {
           onChange={(e) => setPhysics({ friction: Number(e.target.value) })}
         />
       </label>
+      <label className="checkbox-row">
+        <input
+          id="archetype-non-dynamic"
+          type="checkbox"
+          checked={form.physics.dynamic === false}
+          onChange={(e) =>
+            setPhysics(
+              e.target.checked
+                ? { dynamic: false, platformSize: form.physics.platformSize ?? { width: 120, height: 20 } }
+                : { dynamic: true, platformSize: undefined }
+            )
+          }
+        />
+        Non-dynamic (a platform — ignores gravity/collision, moves only via its own behavior)
+      </label>
+      {form.physics.dynamic === false && (
+        <>
+          <label>
+            Platform width
+            <input
+              id="archetype-platform-width"
+              type="number"
+              min="1"
+              value={form.physics.platformSize?.width ?? 120}
+              onChange={(e) => setPhysics({ platformSize: { ...form.physics.platformSize, width: Number(e.target.value) || 1 } })}
+            />
+          </label>
+          <label>
+            Platform height
+            <input
+              id="archetype-platform-height"
+              type="number"
+              min="1"
+              value={form.physics.platformSize?.height ?? 20}
+              onChange={(e) => setPhysics({ platformSize: { ...form.physics.platformSize, height: Number(e.target.value) || 1 } })}
+            />
+          </label>
+        </>
+      )}
 
       <fieldset id="archetype-properties">
         <legend>Properties</legend>
@@ -223,7 +262,7 @@ export function ArchetypeEditor({ id, initial, onDone, onCancel }) {
                 ))}
               </select>
             </label>
-            {form.behavior.preset === "patrol" && (
+            {(form.behavior.preset === "patrol" || form.behavior.preset === "patrolKinematic") && (
               <>
                 <label>
                   Range (px either side of its start point)

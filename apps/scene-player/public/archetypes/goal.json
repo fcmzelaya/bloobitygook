@@ -1,0 +1,14 @@
+{
+  "id": "goal",
+  "label": "Goal",
+  "category": "goal",
+  "swatch": "#e0d15e",
+  "boundingRadius": 20,
+  "physics": { "restitution": 0, "friction": 0, "dynamic": false },
+  "properties": [
+    { "name": "width", "default": 40, "required": true },
+    { "name": "height", "default": 40, "required": true }
+  ],
+  "visual": { "kind": "shape", "shape": "rect", "fill": "#e0d15e" },
+  "behavior": { "mode": "static" }
+}

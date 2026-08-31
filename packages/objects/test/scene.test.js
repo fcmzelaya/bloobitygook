@@ -3,7 +3,7 @@ import { createWorld, spawn } from "@bloobitygook/engine/core";
 import { DEFAULT_GRAVITY } from "@bloobitygook/engine/physics";
 import { createCatalog } from "../src/catalog.js";
 import { STANDARD_CATALOG } from "../src/standard.js";
-import { loadScene, serializeScene, catalogIdsOf } from "../src/scene.js";
+import { loadScene, serializeScene, catalogIdsOf, nextSceneIdOf } from "../src/scene.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const makeWorldEl = () => document.createElementNS(SVG_NS, "g");
@@ -101,5 +101,24 @@ describe("catalogIdsOf", () => {
 
   it("returns the scene's own catalogIds when present", () => {
     expect(catalogIdsOf({ objects: [], catalogIds: ["o", "j"] })).toEqual(["o", "j"]);
+  });
+});
+
+describe("nextSceneId", () => {
+  it("serializeScene defaults to null when not given", () => {
+    const world = createWorld();
+    const out = serializeScene(world, DEFAULT_GRAVITY, STANDARD_CATALOG);
+    expect(out.nextSceneId).toBeNull();
+  });
+
+  it("serializeScene passes through a given nextSceneId", () => {
+    const world = createWorld();
+    const out = serializeScene(world, DEFAULT_GRAVITY, STANDARD_CATALOG, "level-2");
+    expect(out.nextSceneId).toBe("level-2");
+  });
+
+  it("nextSceneIdOf reads it back, defaulting to null for a scene predating this field", () => {
+    expect(nextSceneIdOf({ objects: [] })).toBeNull();
+    expect(nextSceneIdOf({ objects: [], nextSceneId: "level-2" })).toBe("level-2");
   });
 });
